@@ -25,7 +25,6 @@ android {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.annotation)
     implementation(libs.hilt.android)
     implementation(libs.androidx.camera.core)
     implementation(libs.androidx.camera.camera2)

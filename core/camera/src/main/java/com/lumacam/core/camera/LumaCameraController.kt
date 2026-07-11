@@ -2,7 +2,7 @@ package com.lumacam.core.camera
 
 import android.content.Context
 import android.util.Log
-import androidx.annotation.SuppressLint
+import android.annotation.SuppressLint
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.*
