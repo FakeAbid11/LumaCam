@@ -31,5 +31,5 @@ class MediaSaver @Inject constructor(@ApplicationContext private val context: Co
 /** Pure, testable file-name builder (no Android dependencies). */
 fun buildMediaFileName(prefix: String, extension: String, date: Date): String {
     val fmt = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
-    return "$prefix_${fmt.format(date)}.$extension"
+    return "${prefix}_${fmt.format(date)}.$extension"
 }
