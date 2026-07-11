@@ -57,6 +57,7 @@ dependencies {
     implementation(project(":core:common"))
     implementation(project(":core:ui"))
     implementation(project(":core:camera"))
+    implementation(libs.androidx.camera.view)
     implementation(project(":feature:ai"))
     implementation(project(":feature:gallery"))
 
