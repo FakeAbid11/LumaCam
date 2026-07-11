@@ -31,11 +31,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cameraswitch
 import androidx.compose.material.icons.filled.FlashAuto
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.GridOff
+import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
@@ -59,7 +62,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
@@ -69,6 +74,12 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.lumacam.app.navigation.Routes
+import com.lumacam.app.ui.camera.hud.AiAssistantSheetContent
+import com.lumacam.app.ui.camera.hud.AnalyzingOverlay
+import com.lumacam.app.ui.camera.hud.CompositionGridOverlay
+import com.lumacam.app.ui.camera.hud.DirectionalArrowOverlay
+import com.lumacam.app.ui.camera.hud.GhostCropOverlay
+import com.lumacam.app.ui.camera.hud.HorizonOverlay
 import com.lumacam.core.camera.FlashMode
 import com.lumacam.core.ui.components.LumaBottomSheet
 import com.lumacam.core.ui.theme.LumaAccent
@@ -80,17 +91,23 @@ private const val CONTROLS_HIDE_DELAY_MS = 4000L
 @Composable
 fun CameraScreen(
     navController: NavHostController? = null,
-    viewModel: CameraViewModel = hiltViewModel()
+    viewModel: CameraViewModel = hiltViewModel(),
+    hudViewModel: AiHudViewModel = hiltViewModel()
 ) {
     CameraPermissionGate(needsAudio = true) {
-        CameraContent(navController, viewModel)
+        CameraContent(navController, viewModel, hudViewModel)
     }
 }
 
 @Composable
-private fun CameraContent(navController: NavHostController?, viewModel: CameraViewModel) {
+private fun CameraContent(
+    navController: NavHostController?,
+    viewModel: CameraViewModel,
+    hudViewModel: AiHudViewModel
+) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val haptic = LocalHapticFeedback.current
 
     val flashMode by viewModel.flashMode.collectAsState()
     val zoom by viewModel.zoomState.collectAsState()
@@ -100,10 +117,13 @@ private fun CameraContent(navController: NavHostController?, viewModel: CameraVi
     val capabilities by viewModel.capabilities.collectAsState()
     val manualState by viewModel.manualState.collectAsState()
     val lenses by viewModel.availableLenses.collectAsState()
+    val hudState by hudViewModel.state.collectAsState()
 
     var focusPoint by remember { mutableStateOf<Offset?>(null) }
     var fullScreenMedia by remember { mutableStateOf<File?>(null) }
     var showPro by remember { mutableStateOf(false) }
+    var gridEnabled by remember { mutableStateOf(false) }
+    var showAiSheet by remember { mutableStateOf(false) }
     var captureMode by remember { mutableStateOf(CaptureMode.PHOTO) }
     var captureKey by remember { mutableIntStateOf(0) }
     var controlsVisible by remember { mutableStateOf(true) }
@@ -130,6 +150,20 @@ private fun CameraContent(navController: NavHostController?, viewModel: CameraVi
         if (captureKey > 0) {
             captureFlash.snapTo(0.85f)
             captureFlash.animateTo(0f, animationSpec = androidx.compose.animation.core.tween(320))
+        }
+    }
+
+    // Auto-open the AI Assistant sheet + fire the "perfect frame" haptic once the
+    // analysis is ready. Gated on the result so both mock (now) and real data
+    // (Prompt 6/7) trigger identically.
+    LaunchedEffect(hudState.result) {
+        val result = hudState.result
+        if (result != null) {
+            showPro = false
+            showAiSheet = true
+            if (result.compositionScore >= 100) {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
         }
     }
 
@@ -199,6 +233,25 @@ private fun CameraContent(navController: NavHostController?, viewModel: CameraVi
             )
         }
 
+        // AI guidance HUD (all driven by the single CompositionResult).
+        if (gridEnabled) {
+            CompositionGridOverlay()
+        }
+        hudState.result?.let { result ->
+            HorizonOverlay(tiltAngle = result.tiltAngle, isLevel = result.isLevel)
+            result.targetCrop?.let { GhostCropOverlay(bounds = it) }
+            DirectionalArrowOverlay(direction = result.suggestedDirection)
+        }
+        hudState.stage?.let { stage ->
+            AnimatedVisibility(
+                visible = hudState.isAnalyzing,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                AnalyzingOverlay(current = stage)
+            }
+        }
+
         // Top chrome — fades with relevance.
         AnimatedVisibility(
             visible = controlsVisible,
@@ -210,9 +263,12 @@ private fun CameraContent(navController: NavHostController?, viewModel: CameraVi
                 flashMode = flashMode,
                 showProAvailable = capabilities?.supportsAnyManualControl == true,
                 proActive = showPro,
+                gridEnabled = gridEnabled,
                 onFlash = { cycleFlash(viewModel, flashMode); interactionTick++ },
                 onSwitchLens = { viewModel.toggleLens(); interactionTick++ },
                 onPro = { showPro = true; interactionTick++ },
+                onToggleGrid = { gridEnabled = !gridEnabled; interactionTick++ },
+                onDemo = { hudViewModel.startAnalysis(); interactionTick++ },
                 onSettings = { navController?.navigate(Routes.SETTINGS) }
             )
         }
@@ -284,6 +340,8 @@ private fun CameraContent(navController: NavHostController?, viewModel: CameraVi
                     mode = captureMode,
                     isRecording = isRecording,
                     captureKey = captureKey,
+                    scoreProgress = hudState.result?.let { it.compositionScore / 100f },
+                    glow = (hudState.result?.compositionScore ?: 0) >= 100,
                     onClick = {
                         interactionTick++
                         when (captureMode) {
@@ -326,6 +384,16 @@ private fun CameraContent(navController: NavHostController?, viewModel: CameraVi
         }
     }
 
+    val aiResult = hudState.result
+    if (showAiSheet && aiResult != null) {
+        LumaBottomSheet(
+            onDismiss = { showAiSheet = false },
+            title = "AI Assistant"
+        ) {
+            AiAssistantSheetContent(result = aiResult)
+        }
+    }
+
     fullScreenMedia?.let { file ->
         MediaViewer(file = file, onDismiss = { fullScreenMedia = null })
     }
@@ -336,9 +404,12 @@ private fun TopBar(
     flashMode: Int,
     showProAvailable: Boolean,
     proActive: Boolean,
+    gridEnabled: Boolean,
     onFlash: () -> Unit,
     onSwitchLens: () -> Unit,
     onPro: () -> Unit,
+    onToggleGrid: () -> Unit,
+    onDemo: () -> Unit,
     onSettings: () -> Unit
 ) {
     Row(
@@ -350,6 +421,17 @@ private fun TopBar(
     ) {
         AiModeIndicator()
         Spacer(Modifier.weight(1f))
+        // Demo trigger for the AI HUD (Prompt 5). Real analysis wires in Prompt 6/7.
+        IconButton(onClick = onDemo) {
+            Icon(Icons.Filled.AutoAwesome, "Analyze scene", tint = LumaAccent)
+        }
+        IconButton(onClick = onToggleGrid) {
+            Icon(
+                if (gridEnabled) Icons.Filled.GridOn else Icons.Filled.GridOff,
+                "Grid",
+                tint = Color.White
+            )
+        }
         IconButton(onClick = onFlash) {
             Icon(flashIcon(flashMode), "Flash mode", tint = Color.White)
         }

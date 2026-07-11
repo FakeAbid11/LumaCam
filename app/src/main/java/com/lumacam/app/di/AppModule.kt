@@ -5,6 +5,8 @@ import androidx.room.Room
 import com.lumacam.app.data.CaptureDao
 import com.lumacam.app.data.LumaDatabase
 import com.lumacam.app.data.SettingsRepository
+import com.lumacam.feature.ai.CompositionAnalyzer
+import com.lumacam.feature.ai.MockCompositionAnalyzer
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -30,4 +32,9 @@ object AppModule {
     @Singleton
     fun provideSettingsRepository(@ApplicationContext context: Context): SettingsRepository =
         SettingsRepository(context)
+
+    // Prompt 5: mock AI source. Prompt 6/7 swaps this binding for the real analyzer.
+    @Provides
+    @Singleton
+    fun provideCompositionAnalyzer(): CompositionAnalyzer = MockCompositionAnalyzer()
 }

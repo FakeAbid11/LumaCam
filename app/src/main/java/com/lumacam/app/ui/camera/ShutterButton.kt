@@ -22,10 +22,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
+import com.lumacam.core.ui.theme.LumaAccent
 
 private val RecordRed = Color(0xFFFF3B30)
 
@@ -35,6 +39,9 @@ private val RecordRed = Color(0xFFFF3B30)
  *
  * @param captureKey increment this on each successful capture to fire the ring
  *   pulse animation.
+ * @param scoreProgress optional AI composition score (0f..1f); when non-null an
+ *   accent ring fills proportionally around the button.
+ * @param glow when true, the score ring gains an accent glow (fired at 100%).
  */
 @Composable
 fun ShutterButton(
@@ -42,8 +49,20 @@ fun ShutterButton(
     isRecording: Boolean,
     captureKey: Int,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    scoreProgress: Float? = null,
+    glow: Boolean = false
 ) {
+    val animatedScore by animateFloatAsState(
+        targetValue = scoreProgress?.coerceIn(0f, 1f) ?: 0f,
+        animationSpec = tween(durationMillis = 700),
+        label = "shutterScore"
+    )
+    val glowAlpha by animateFloatAsState(
+        targetValue = if (glow) 1f else 0f,
+        animationSpec = tween(durationMillis = 400),
+        label = "shutterGlow"
+    )
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(
@@ -102,6 +121,42 @@ fun ShutterButton(
                 radius = radius - 3.dp.toPx(),
                 style = Stroke(width = 5.dp.toPx())
             )
+            if (scoreProgress != null) {
+                val ringStroke = 4.dp.toPx()
+                val inset = 1.dp.toPx()
+                val diameter = size.minDimension - inset * 2
+                val topLeft = Offset(inset, inset)
+                val arcSize = Size(diameter, diameter)
+                if (glowAlpha > 0f) {
+                    drawArc(
+                        color = LumaAccent.copy(alpha = 0.4f * glowAlpha),
+                        startAngle = -90f,
+                        sweepAngle = 360f * animatedScore,
+                        useCenter = false,
+                        topLeft = topLeft,
+                        size = arcSize,
+                        style = Stroke(width = ringStroke * 3f, cap = StrokeCap.Round)
+                    )
+                }
+                drawArc(
+                    color = Color.White.copy(alpha = 0.18f),
+                    startAngle = -90f,
+                    sweepAngle = 360f,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = arcSize,
+                    style = Stroke(width = ringStroke)
+                )
+                drawArc(
+                    color = LumaAccent,
+                    startAngle = -90f,
+                    sweepAngle = 360f * animatedScore,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = arcSize,
+                    style = Stroke(width = ringStroke, cap = StrokeCap.Round)
+                )
+            }
         }
         Box(
             modifier = Modifier
