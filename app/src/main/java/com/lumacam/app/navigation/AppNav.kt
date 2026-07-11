@@ -14,6 +14,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.lumacam.app.ui.camera.CameraScreen
 
 object Routes {
     const val CAMERA = "camera"
@@ -31,11 +32,7 @@ fun AppNav(
         modifier = modifier
     ) {
         composable(Routes.CAMERA) {
-            PlaceholderScreen(
-                title = "Camera",
-                subtitle = "CameraX capture lands here (PRD §5).",
-                onOpenSettings = { navController.navigate(Routes.SETTINGS) }
-            )
+            CameraScreen(navController = navController)
         }
         composable(Routes.SETTINGS) {
             PlaceholderScreen(
