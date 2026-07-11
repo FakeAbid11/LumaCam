@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -82,9 +83,13 @@ private fun CameraContent(navController: NavHostController?, viewModel: CameraVi
     val isRecording by viewModel.isRecording.collectAsState()
     val lastMedia by viewModel.lastMedia.collectAsState()
     val error by viewModel.bindingError.collectAsState()
+    val capabilities by viewModel.capabilities.collectAsState()
+    val manualState by viewModel.manualState.collectAsState()
+    val lenses by viewModel.availableLenses.collectAsState()
 
     var focusPoint by remember { mutableStateOf<Offset?>(null) }
     var fullScreenMedia by remember { mutableStateOf<File?>(null) }
+    var showPro by remember { mutableStateOf(false) }
     val previewViewState = remember { mutableStateOf<PreviewView?>(null) }
     val previewView = previewViewState.value
 
@@ -116,6 +121,10 @@ private fun CameraContent(navController: NavHostController?, viewModel: CameraVi
                     focusPoint = Offset(e.x, e.y)
                     viewModel.tapToFocus(e.x, e.y, pv)
                     return true
+                }
+
+                override fun onLongPress(e: MotionEvent) {
+                    viewModel.setFocusLocked(!viewModel.manualState.value.focusLocked)
                 }
             }
         )
@@ -156,11 +165,19 @@ private fun CameraContent(navController: NavHostController?, viewModel: CameraVi
             }
         }
 
-        IconButton(
-            onClick = { navController?.navigate(Routes.SETTINGS) },
-            modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
-        ) {
-            Icon(Icons.Filled.Settings, "Settings", tint = Color.White)
+        Column(Modifier.align(Alignment.TopEnd).padding(8.dp)) {
+            IconButton(onClick = { navController?.navigate(Routes.SETTINGS) }) {
+                Icon(Icons.Filled.Settings, "Settings", tint = Color.White)
+            }
+            if (capabilities?.supportsAnyManualControl == true) {
+                IconButton(onClick = { showPro = !showPro }) {
+                    Icon(
+                        Icons.Filled.Tune,
+                        "Pro controls",
+                        tint = if (showPro) Color(0xFF3A6FF8) else Color.White
+                    )
+                }
+            }
         }
 
         error?.let {
@@ -171,10 +188,41 @@ private fun CameraContent(navController: NavHostController?, viewModel: CameraVi
             )
         }
 
+        if (manualState.exposureLocked || manualState.focusLocked) {
+            Row(
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 110.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (manualState.exposureLocked) Text("AE-L", color = Color.Yellow)
+                if (manualState.focusLocked) Text("AF-L", color = Color.Yellow)
+            }
+        }
+
         Column(
-            Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp),
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+          val caps = capabilities
+          if (showPro && caps != null && caps.supportsAnyManualControl) {
+              ProControlsPanel(
+                  capabilities = caps,
+                  manualState = manualState,
+                  lenses = lenses,
+                  onIso = viewModel::setIso,
+                  onExposureTime = viewModel::setExposureTime,
+                  onExposureCompensation = viewModel::setExposureCompensation,
+                  onWhiteBalance = viewModel::setWhiteBalance,
+                  onFocusDistance = viewModel::setManualFocusDistance,
+                  onExposureLock = viewModel::setExposureLocked,
+                  onFocusLock = viewModel::setFocusLocked,
+                  onHdr = viewModel::setHdrEnabled,
+                  onSelectLens = viewModel::selectLens
+              )
+          }
+          Column(
+            Modifier.padding(bottom = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
             zoom?.let { z ->
                 Slider(
                     value = z.zoomRatio,
@@ -213,6 +261,7 @@ private fun CameraContent(navController: NavHostController?, viewModel: CameraVi
                     )
                 }
             }
+          }
         }
     }
 
