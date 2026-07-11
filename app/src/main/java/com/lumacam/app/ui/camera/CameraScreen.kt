@@ -6,6 +6,10 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,30 +21,34 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cameraswitch
 import androidx.compose.material.icons.filled.FlashAuto
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
-import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -53,16 +61,21 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.foundation.layout.height
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.lumacam.app.navigation.Routes
 import com.lumacam.core.camera.FlashMode
+import com.lumacam.core.ui.components.LumaBottomSheet
+import com.lumacam.core.ui.theme.LumaAccent
 import java.io.File
 import kotlinx.coroutines.delay
+
+private const val CONTROLS_HIDE_DELAY_MS = 4000L
 
 @Composable
 fun CameraScreen(
@@ -91,13 +104,32 @@ private fun CameraContent(navController: NavHostController?, viewModel: CameraVi
     var focusPoint by remember { mutableStateOf<Offset?>(null) }
     var fullScreenMedia by remember { mutableStateOf<File?>(null) }
     var showPro by remember { mutableStateOf(false) }
+    var captureMode by remember { mutableStateOf(CaptureMode.PHOTO) }
+    var captureKey by remember { mutableIntStateOf(0) }
+    var controlsVisible by remember { mutableStateOf(true) }
+    var interactionTick by remember { mutableIntStateOf(0) }
     val previewViewState = remember { mutableStateOf<PreviewView?>(null) }
     val previewView = previewViewState.value
+
+    val captureFlash = remember { Animatable(0f) }
 
     LaunchedEffect(focusPoint) {
         if (focusPoint != null) {
             delay(1000)
             focusPoint = null
+        }
+    }
+
+    LaunchedEffect(interactionTick) {
+        controlsVisible = true
+        delay(CONTROLS_HIDE_DELAY_MS)
+        controlsVisible = false
+    }
+
+    LaunchedEffect(captureKey) {
+        if (captureKey > 0) {
+            captureFlash.snapTo(0.85f)
+            captureFlash.animateTo(0f, animationSpec = androidx.compose.animation.core.tween(320))
         }
     }
 
@@ -111,6 +143,7 @@ private fun CameraContent(navController: NavHostController?, viewModel: CameraVi
                 override fun onScale(detector: ScaleGestureDetector): Boolean {
                     val z = viewModel.zoomState.value ?: return true
                     viewModel.setZoomRatio(z.zoomRatio * detector.scaleFactor)
+                    interactionTick++
                     return true
                 }
             }
@@ -121,6 +154,7 @@ private fun CameraContent(navController: NavHostController?, viewModel: CameraVi
                 override fun onSingleTapUp(e: MotionEvent): Boolean {
                     focusPoint = Offset(e.x, e.y)
                     viewModel.tapToFocus(e.x, e.y, pv)
+                    interactionTick++
                     return true
                 }
 
@@ -148,126 +182,268 @@ private fun CameraContent(navController: NavHostController?, viewModel: CameraVi
             modifier = Modifier.fillMaxSize()
         )
 
+        if (captureFlash.value > 0f) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.White.copy(alpha = captureFlash.value))
+            )
+        }
+
         focusPoint?.let { pt ->
             Box(
                 Modifier
-                    .offset { IntOffset((pt.x - 32).toInt(), (pt.y - 32).toInt()) }
-                    .size(64.dp)
-                    .border(2.dp, Color.White, CircleShape)
+                    .offset { IntOffset((pt.x - 40).toInt(), (pt.y - 40).toInt()) }
+                    .size(80.dp)
+                    .border(1.5.dp, Color.White, CircleShape)
             )
         }
 
-        Column(Modifier.align(Alignment.TopStart).padding(8.dp)) {
-            IconButton(onClick = { viewModel.toggleLens() }) {
-                Icon(Icons.Filled.Cameraswitch, "Switch camera", tint = Color.White)
-            }
-            IconButton(onClick = { cycleFlash(viewModel, flashMode) }) {
-                Icon(flashIcon(flashMode), "Flash mode", tint = Color.White)
-            }
+        // Top chrome — fades with relevance.
+        AnimatedVisibility(
+            visible = controlsVisible,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter)
+        ) {
+            TopBar(
+                flashMode = flashMode,
+                showProAvailable = capabilities?.supportsAnyManualControl == true,
+                proActive = showPro,
+                onFlash = { cycleFlash(viewModel, flashMode); interactionTick++ },
+                onSwitchLens = { viewModel.toggleLens(); interactionTick++ },
+                onPro = { showPro = true; interactionTick++ },
+                onSettings = { navController?.navigate(Routes.SETTINGS) }
+            )
         }
 
-        Column(Modifier.align(Alignment.TopEnd).padding(8.dp)) {
-            IconButton(onClick = { navController?.navigate(Routes.SETTINGS) }) {
-                Icon(Icons.Filled.Settings, "Settings", tint = Color.White)
-            }
-            if (capabilities?.supportsAnyManualControl == true) {
-                IconButton(onClick = { showPro = !showPro }) {
-                    Icon(
-                        Icons.Filled.Tune,
-                        "Pro controls",
-                        tint = if (showPro) Color(0xFF3A6FF8) else Color.White
-                    )
+        // Recording indicator + AE/AF lock badges.
+        Column(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(top = 56.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            if (isRecording) RecordingPill()
+            if (manualState.exposureLocked || manualState.focusLocked) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (manualState.exposureLocked) LockBadge("AE-L")
+                    if (manualState.focusLocked) LockBadge("AF-L")
                 }
             }
-        }
-
-        error?.let {
-            Text(
-                it,
-                color = Color.Red,
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 72.dp)
-            )
-        }
-
-        if (manualState.exposureLocked || manualState.focusLocked) {
-            Row(
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 110.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                if (manualState.exposureLocked) Text("AE-L", color = Color.Yellow)
-                if (manualState.focusLocked) Text("AF-L", color = Color.Yellow)
+            error?.let {
+                Text(it, color = Color(0xFFFF6B6B), fontSize = 13.sp)
             }
         }
 
+        // Bottom controls.
         Column(
-            Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(bottom = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-          val caps = capabilities
-          if (showPro && caps != null && caps.supportsAnyManualControl) {
-              ProControlsPanel(
-                  capabilities = caps,
-                  manualState = manualState,
-                  lenses = lenses,
-                  onIso = viewModel::setIso,
-                  onExposureTime = viewModel::setExposureTime,
-                  onExposureCompensation = viewModel::setExposureCompensation,
-                  onWhiteBalance = viewModel::setWhiteBalance,
-                  onFocusDistance = viewModel::setManualFocusDistance,
-                  onExposureLock = viewModel::setExposureLocked,
-                  onFocusLock = viewModel::setFocusLocked,
-                  onHdr = viewModel::setHdrEnabled,
-                  onSelectLens = viewModel::selectLens
-              )
-          }
-          Column(
-            Modifier.padding(bottom = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-          ) {
-            zoom?.let { z ->
-                Slider(
-                    value = z.zoomRatio,
-                    onValueChange = { viewModel.setZoomRatio(it) },
-                    valueRange = z.minZoomRatio..z.maxZoomRatio,
-                    modifier = Modifier.width(300.dp)
+            AnimatedVisibility(visible = controlsVisible, enter = fadeIn(), exit = fadeOut()) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    zoom?.let { z ->
+                        if (z.maxZoomRatio > z.minZoomRatio) {
+                            Slider(
+                                value = z.zoomRatio,
+                                onValueChange = { viewModel.setZoomRatio(it); interactionTick++ },
+                                valueRange = z.minZoomRatio..z.maxZoomRatio,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = Color.White,
+                                    activeTrackColor = Color.White,
+                                    inactiveTrackColor = Color(0x66FFFFFF)
+                                ),
+                                modifier = Modifier.width(280.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.size(8.dp))
+                    ModeSwitcher(
+                        mode = captureMode,
+                        onModeChange = { if (!isRecording) { captureMode = it; interactionTick++ } },
+                        enabled = !isRecording
+                    )
+                    Spacer(Modifier.size(16.dp))
+                }
+            }
+
+            Box(Modifier.fillMaxWidth().padding(horizontal = 28.dp)) {
+                GalleryThumbnail(
+                    file = lastMedia,
+                    onClick = { lastMedia?.let { fullScreenMedia = it } },
+                    modifier = Modifier.align(Alignment.CenterStart)
+                )
+                ShutterButton(
+                    mode = captureMode,
+                    isRecording = isRecording,
+                    captureKey = captureKey,
+                    onClick = {
+                        interactionTick++
+                        when (captureMode) {
+                            CaptureMode.PHOTO -> {
+                                captureKey++
+                                viewModel.capturePhoto { }
+                            }
+                            CaptureMode.VIDEO -> {
+                                if (isRecording) viewModel.stopRecording()
+                                else viewModel.startRecording(true)
+                            }
+                        }
+                    },
+                    modifier = Modifier.align(Alignment.Center)
                 )
             }
-            Spacer(Modifier.height(8.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                lastMedia?.let { file ->
-                    val thumb = remember(file) { loadThumbnail(file) }
-                    Box(
-                        Modifier
-                            .size(48.dp)
-                            .clickable { fullScreenMedia = file }
-                            .background(Color.DarkGray),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        thumb?.let { Image(bitmap = it, contentDescription = null, Modifier.fillMaxSize()) }
-                    }
-                }
-                IconButton(onClick = { viewModel.capturePhoto { } }) {
-                    Icon(Icons.Filled.PhotoCamera, "Capture photo", tint = Color.White)
-                }
-                IconButton(onClick = {
-                    if (isRecording) viewModel.stopRecording() else viewModel.startRecording(true)
-                }) {
-                    Icon(
-                        if (isRecording) Icons.Filled.Stop else Icons.Filled.Videocam,
-                        if (isRecording) "Stop recording" else "Record video",
-                        tint = Color.White
-                    )
-                }
-            }
-          }
+        }
+    }
+
+    val caps = capabilities
+    if (showPro && caps != null && caps.supportsAnyManualControl) {
+        LumaBottomSheet(
+            onDismiss = { showPro = false },
+            title = "Pro controls"
+        ) {
+            ProControlsContent(
+                capabilities = caps,
+                manualState = manualState,
+                lenses = lenses,
+                onIso = viewModel::setIso,
+                onExposureTime = viewModel::setExposureTime,
+                onExposureCompensation = viewModel::setExposureCompensation,
+                onWhiteBalance = viewModel::setWhiteBalance,
+                onFocusDistance = viewModel::setManualFocusDistance,
+                onExposureLock = viewModel::setExposureLocked,
+                onFocusLock = viewModel::setFocusLocked,
+                onHdr = viewModel::setHdrEnabled,
+                onSelectLens = viewModel::selectLens
+            )
         }
     }
 
     fullScreenMedia?.let { file ->
         MediaViewer(file = file, onDismiss = { fullScreenMedia = null })
+    }
+}
+
+@Composable
+private fun TopBar(
+    flashMode: Int,
+    showProAvailable: Boolean,
+    proActive: Boolean,
+    onFlash: () -> Unit,
+    onSwitchLens: () -> Unit,
+    onPro: () -> Unit,
+    onSettings: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AiModeIndicator()
+        Spacer(Modifier.weight(1f))
+        IconButton(onClick = onFlash) {
+            Icon(flashIcon(flashMode), "Flash mode", tint = Color.White)
+        }
+        IconButton(onClick = onSwitchLens) {
+            Icon(Icons.Filled.Cameraswitch, "Switch camera", tint = Color.White)
+        }
+        if (showProAvailable) {
+            IconButton(onClick = onPro) {
+                Icon(
+                    Icons.Filled.Tune,
+                    "Pro controls",
+                    tint = if (proActive) LumaAccent else Color.White
+                )
+            }
+        }
+        IconButton(onClick = onSettings) {
+            Icon(Icons.Filled.Settings, "Settings", tint = Color.White)
+        }
+    }
+}
+
+/** Non-functional AI mode indicator ("⚡ Smart ▾"); dropdown wired in Prompt 10. */
+@Composable
+private fun AiModeIndicator() {
+    Row(
+        modifier = Modifier
+            .padding(start = 8.dp)
+            .background(Color(0x33000000), RoundedCornerShape(50))
+            .clickable { /* AI mode selector — Prompt 10 */ }
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            Icons.Filled.Bolt,
+            contentDescription = null,
+            tint = LumaAccent,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(Modifier.size(4.dp))
+        Text("Smart", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        Icon(
+            Icons.Filled.ArrowDropDown,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+@Composable
+private fun RecordingPill() {
+    Row(
+        modifier = Modifier
+            .background(Color(0x66000000), RoundedCornerShape(50))
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(Modifier.size(8.dp).background(Color(0xFFFF3B30), CircleShape))
+        Spacer(Modifier.size(6.dp))
+        Text("REC", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun LockBadge(text: String) {
+    Text(
+        text,
+        color = Color.White,
+        fontSize = 11.sp,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier
+            .background(Color(0x66000000), RoundedCornerShape(50))
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+    )
+}
+
+@Composable
+private fun GalleryThumbnail(file: File?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .size(48.dp)
+            .clickable(enabled = file != null, onClick = onClick)
+            .background(Color(0x33FFFFFF), RoundedCornerShape(10.dp))
+            .border(1.dp, Color(0x55FFFFFF), RoundedCornerShape(10.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        val thumb = remember(file) { file?.let { loadThumbnail(it) } }
+        thumb?.let {
+            Image(
+                bitmap = it,
+                contentDescription = "Last capture",
+                modifier = Modifier.fillMaxSize().padding(1.dp)
+            )
+        }
     }
 }
 

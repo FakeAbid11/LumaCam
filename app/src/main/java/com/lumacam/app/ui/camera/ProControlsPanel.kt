@@ -1,6 +1,5 @@
 package com.lumacam.app.ui.camera
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -9,13 +8,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -34,9 +34,13 @@ import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Manual/Pro camera controls (from Prompt 3), presented as the body of a
+ * [com.lumacam.core.ui.components.LumaBottomSheet]. Chrome is neutral
+ * (white/gray) — the AI accent is deliberately not used here.
+ */
 @Composable
-fun ProControlsPanel(
+fun ProControlsContent(
     capabilities: CameraCapabilities,
     manualState: ManualCameraState,
     lenses: List<LensInfo>,
@@ -54,11 +58,10 @@ fun ProControlsPanel(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(max = 320.dp)
-            .background(Color(0xE6101010), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+            .heightIn(max = 360.dp)
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         if (lenses.size > 1) {
             SectionLabel("Lens")
@@ -77,7 +80,7 @@ fun ProControlsPanel(
             val range = capabilities.exposureCompensationRange
             val ev = manualState.exposureCompensation * capabilities.exposureCompensationStep
             SectionLabel("Exposure (EV)  ${"%+.1f".format(ev)}")
-            Slider(
+            ProSlider(
                 value = manualState.exposureCompensation.toFloat(),
                 onValueChange = { onExposureCompensation(it.roundToInt()) },
                 valueRange = range.first.toFloat()..range.last.toFloat(),
@@ -97,7 +100,7 @@ fun ProControlsPanel(
                 }
             }
             if (isoRange != null) {
-                Slider(
+                ProSlider(
                     value = (manualState.isoValue ?: defaultIso(isoRange)).toFloat(),
                     onValueChange = { onIso(it.roundToInt()) },
                     valueRange = isoRange.first.toFloat()..isoRange.last.toFloat()
@@ -107,7 +110,7 @@ fun ProControlsPanel(
             if (expRange != null) {
                 val current = manualState.exposureTimeNanos ?: defaultExposureTimeNanos(expRange)
                 SectionLabel("Shutter  ${formatShutter(current)}")
-                Slider(
+                ProSlider(
                     value = shutterToFraction(current, expRange),
                     onValueChange = { onExposureTime(fractionToShutter(it, expRange)) },
                     valueRange = 0f..1f
@@ -134,7 +137,7 @@ fun ProControlsPanel(
                 ProChip("Auto", !manualState.isManualFocus) { onFocusDistance(null) }
             }
             if (minDist > 0f) {
-                Slider(
+                ProSlider(
                     value = manualState.focusDistance ?: 0f,
                     onValueChange = { onFocusDistance(it) },
                     valueRange = 0f..minDist
@@ -165,7 +168,13 @@ fun ProControlsPanel(
                 SectionLabel("HDR")
                 Switch(
                     checked = manualState.hdrEnabled,
-                    onCheckedChange = { onHdr(it) }
+                    onCheckedChange = { onHdr(it) },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.Black,
+                        checkedTrackColor = Color.White,
+                        uncheckedThumbColor = Color(0xFF8A8A96),
+                        uncheckedTrackColor = Color(0xFF2A2A30)
+                    )
                 )
             }
         }
@@ -175,6 +184,26 @@ fun ProControlsPanel(
 @Composable
 private fun SectionLabel(text: String) {
     Text(text, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+}
+
+@Composable
+private fun ProSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int = 0
+) {
+    Slider(
+        value = value,
+        onValueChange = onValueChange,
+        valueRange = valueRange,
+        steps = steps,
+        colors = SliderDefaults.colors(
+            thumbColor = Color.White,
+            activeTrackColor = Color.White,
+            inactiveTrackColor = Color(0xFF3A3A42)
+        )
+    )
 }
 
 @Composable
@@ -198,8 +227,8 @@ private fun ProChip(label: String, selected: Boolean, onClick: () -> Unit) {
         label = { Text(label) },
         colors = FilterChipDefaults.filterChipColors(
             labelColor = Color.White,
-            selectedContainerColor = Color(0xFF3A6FF8),
-            selectedLabelColor = Color.White
+            selectedContainerColor = Color.White,
+            selectedLabelColor = Color.Black
         )
     )
 }
