@@ -126,9 +126,9 @@ fun ProControlsPanel(
 
         if (capabilities.supportsManualFocus) {
             val minDist = capabilities.minFocusDistance ?: 0f
+            val focus = manualState.focusDistance
             SectionLabel(
-                "Focus  " + if (manualState.focusDistance != null)
-                    formatFocus(manualState.focusDistance) else "Auto"
+                "Focus  " + if (focus != null) formatFocus(focus) else "Auto"
             )
             ChipRow {
                 ProChip("Auto", !manualState.isManualFocus) { onFocusDistance(null) }

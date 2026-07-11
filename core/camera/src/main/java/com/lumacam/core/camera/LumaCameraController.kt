@@ -9,7 +9,6 @@ import android.annotation.SuppressLint
 import androidx.camera.camera2.interop.Camera2CameraControl
 import androidx.camera.camera2.interop.Camera2CameraInfo
 import androidx.camera.camera2.interop.CaptureRequestOptions
-import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.*
@@ -30,7 +29,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
  * ViewModel drives it and the Compose screen renders it.
  */
 @SuppressLint("MissingPermission")
-@OptIn(ExperimentalCamera2Interop::class)
 class LumaCameraController @Inject constructor(
     @ApplicationContext private val context: Context,
     private val mediaSaver: MediaSaver
