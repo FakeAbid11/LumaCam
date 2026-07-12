@@ -4,6 +4,8 @@ import com.lumacam.feature.ai.CompositionResult
 import com.lumacam.feature.ai.CropBounds
 import com.lumacam.feature.ai.LightingAssessment
 import com.lumacam.feature.ai.MoveDirection
+import com.lumacam.feature.ai.NormalizedPoint
+import com.lumacam.feature.ai.RecommendedAction
 import com.lumacam.feature.ai.SceneType
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -34,7 +36,16 @@ object CompositionJsonMapper {
         @SerialName("tiltAngle") val tiltAngle: Double? = null,
         @SerialName("lighting") val lighting: LightingDto? = null,
         @SerialName("suggestions") val suggestions: List<String>? = null,
-        @SerialName("targetCrop") val targetCrop: CropDto? = null
+        @SerialName("targetCrop") val targetCrop: CropDto? = null,
+        @SerialName("subjectPoint") val subjectPoint: PointDto? = null,
+        @SerialName("recommendedAction") val recommendedAction: String? = null,
+        @SerialName("primaryGuidance") val primaryGuidance: String? = null
+    )
+
+    @Serializable
+    private data class PointDto(
+        @SerialName("x") val x: Float? = null,
+        @SerialName("y") val y: Float? = null
     )
 
     @Serializable
@@ -62,7 +73,10 @@ object CompositionJsonMapper {
             sceneType = normalizeScene(dto.sceneType),
             lighting = normalizeLighting(dto.lighting),
             suggestions = normalizeSuggestions(dto.suggestions),
-            targetCrop = normalizeCrop(dto.targetCrop)
+            targetCrop = normalizeCrop(dto.targetCrop),
+            subjectPoint = normalizePoint(dto.subjectPoint),
+            recommendedAction = normalizeAction(dto.recommendedAction),
+            primaryGuidance = dto.primaryGuidance?.trim()?.takeIf { it.isNotEmpty() }
         )
     }
 
@@ -105,6 +119,24 @@ object CompositionJsonMapper {
             "right" -> MoveDirection.RIGHT
             else -> MoveDirection.NONE
         }
+
+    internal fun normalizeAction(raw: String?): RecommendedAction =
+        when (raw?.trim()?.lowercase()) {
+            "zoom_in", "zoomin", "zoom in", "in" -> RecommendedAction.ZOOM_IN
+            "zoom_out", "zoomout", "zoom out", "out" -> RecommendedAction.ZOOM_OUT
+            "reposition", "re-frame", "reframe", "move" -> RecommendedAction.REPOSITION
+            "hold_and_shoot", "hold and shoot", "shoot", "capture" -> RecommendedAction.HOLD_AND_SHOOT
+            "none", "none." -> RecommendedAction.NONE
+            else -> RecommendedAction.NONE
+        }
+
+    private fun normalizePoint(dto: PointDto?): NormalizedPoint? {
+        if (dto?.x == null || dto.y == null) return null
+        return NormalizedPoint(
+            x = dto.x.coerceIn(0f, 1f),
+            y = dto.y.coerceIn(0f, 1f)
+        )
+    }
 
     internal fun normalizeScene(raw: String?): SceneType =
         when (raw?.trim()?.lowercase()) {

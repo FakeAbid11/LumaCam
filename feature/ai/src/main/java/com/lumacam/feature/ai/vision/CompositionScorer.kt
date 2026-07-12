@@ -3,6 +3,8 @@ package com.lumacam.feature.ai.vision
 import com.lumacam.feature.ai.CompositionResult
 import com.lumacam.feature.ai.CropBounds
 import com.lumacam.feature.ai.MoveDirection
+import com.lumacam.feature.ai.NormalizedPoint
+import com.lumacam.feature.ai.RecommendedAction
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -24,6 +26,10 @@ object CompositionScorer {
 
     private const val PLACEMENT_OK = 70
     private const val CROP_SIZE = 0.8f
+
+    // Subject area (fraction of frame) thresholds that decide zoom guidance.
+    private const val SMALL_SUBJECT_AREA = 0.12f
+    private const val LARGE_SUBJECT_AREA = 0.7f
 
     /**
      * Produces a full [CompositionResult] from detector output, device tilt (deg)
@@ -65,6 +71,21 @@ object CompositionScorer {
             direction = MoveDirection.NONE
         }
 
+        val subjectPoint = primary?.let { NormalizedPoint(it.box.centerX, it.box.centerY) }
+        val recommendedAction = when {
+            primary == null -> RecommendedAction.REPOSITION
+            primary.box.area < SMALL_SUBJECT_AREA -> RecommendedAction.ZOOM_IN
+            primary.box.area > LARGE_SUBJECT_AREA -> RecommendedAction.ZOOM_OUT
+            placement < PLACEMENT_OK -> RecommendedAction.REPOSITION
+            else -> RecommendedAction.HOLD_AND_SHOOT
+        }
+        val primaryGuidance = GuidanceTemplates.build(
+            sceneType = sceneType,
+            placement = placement,
+            action = recommendedAction,
+            lighting = lighting
+        )
+
         return CompositionResult(
             tiltAngle = tiltDegrees,
             compositionScore = compositionScore,
@@ -72,7 +93,10 @@ object CompositionScorer {
             sceneType = sceneType,
             lighting = lighting,
             suggestions = buildSuggestions(primary, placement, tiltDegrees, brightness),
-            targetCrop = primary?.let { targetCrop(it.box, placement) }
+            targetCrop = primary?.let { targetCrop(it.box, placement) },
+            subjectPoint = subjectPoint,
+            recommendedAction = recommendedAction,
+            primaryGuidance = primaryGuidance
         )
     }
 

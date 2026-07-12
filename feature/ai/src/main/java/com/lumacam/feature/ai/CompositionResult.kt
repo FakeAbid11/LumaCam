@@ -17,6 +17,12 @@ import kotlin.math.abs
  * @param lighting a short human-readable lighting assessment.
  * @param suggestions ordered coaching tips shown in the assistant sheet.
  * @param targetCrop optional recommended crop, in normalized [0,1] coordinates.
+ * @param subjectPoint optional detected subject center, in normalized [0,1]
+ *   coordinates (origin top-left); null when no subject was found.
+ * @param recommendedAction optional single next action surfaced as a one-tap
+ *   affordance in the HUD; null when the backend could not decide.
+ * @param primaryGuidance optional one-line narrated reasoning shown beneath the
+ *   overlays; null when the backend provided none.
  */
 data class CompositionResult(
     val tiltAngle: Float,
@@ -25,7 +31,10 @@ data class CompositionResult(
     val sceneType: SceneType,
     val lighting: LightingAssessment,
     val suggestions: List<String>,
-    val targetCrop: CropBounds? = null
+    val targetCrop: CropBounds? = null,
+    val subjectPoint: NormalizedPoint? = null,
+    val recommendedAction: RecommendedAction? = null,
+    val primaryGuidance: String? = null
 ) {
     /** True when the frame is level enough to hide the tilt warning. */
     val isLevel: Boolean get() = abs(tiltAngle) <= LEVEL_THRESHOLD_DEGREES
@@ -62,6 +71,18 @@ data class CropBounds(
     val right: Float,
     val bottom: Float
 )
+
+/** A point in normalized [0,1] coordinates (origin top-left of the frame). */
+data class NormalizedPoint(val x: Float, val y: Float)
+
+/** The single recommended next action surfaced as a one-tap HUD affordance. */
+enum class RecommendedAction(val displayName: String) {
+    ZOOM_IN("Zoom in"),
+    ZOOM_OUT("Zoom out"),
+    REPOSITION("Reposition"),
+    HOLD_AND_SHOOT("Hold & shoot"),
+    NONE("Looks good")
+}
 
 /** Ordered stages reported while the analyzer works, ending at [READY]. */
 enum class AnalysisStage(val label: String) {

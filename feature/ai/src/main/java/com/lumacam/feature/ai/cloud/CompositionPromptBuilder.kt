@@ -16,7 +16,10 @@ object CompositionPromptBuilder {
           "suggestedDirection": "one of: up, down, left, right, none",
           "tiltAngle": "number, horizon tilt in degrees, negative = counter-clockwise",
           "lighting": { "label": "short label", "description": "one-line lighting note" },
-          "suggestions": ["short actionable coaching tip", "..."]
+          "suggestions": ["short actionable coaching tip", "..."],
+          "subjectPoint": { "x": 0.0, "y": 0.0 },
+          "recommendedAction": "one of: zoom_in, zoom_out, reposition, hold_and_shoot, none",
+          "primaryGuidance": "one short friendly sentence narrating the composition reasoning"
         }
     """.trimIndent()
 
@@ -40,6 +43,9 @@ object CompositionPromptBuilder {
             - compositionScore is an integer from 0 to 100.
             - suggestedDirection is the way the photographer should nudge the frame.
             - Keep each suggestion short, kind, and actionable (max 3 suggestions).
+            - Include "subjectPoint" as the normalized center of the main subject (x,y in 0..1) when one is present.
+            - Set "recommendedAction" to the single most helpful next step (zoom_in, zoom_out, reposition, hold_and_shoot, or none).
+            - Write "primaryGuidance" as one short, friendly sentence narrating your reasoning.
             - If unsure of the scene, use "unknown".$context
         """.trimIndent()
     }

@@ -1,6 +1,8 @@
 package com.lumacam.feature.ai.cloud
 
 import com.lumacam.feature.ai.MoveDirection
+import com.lumacam.feature.ai.NormalizedPoint
+import com.lumacam.feature.ai.RecommendedAction
 import com.lumacam.feature.ai.SceneType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -106,10 +108,54 @@ class CompositionJsonMapperTest {
     }
 
     @Test
-    fun extractsOuterObjectWithNesting() {
+    fun extractJsonObjectWithNesting() {
         val extracted = CompositionJsonMapper.extractJsonObject(
             "prefix {\"a\":{\"b\":1},\"c\":2} suffix"
         )
         assertEquals("{\"a\":{\"b\":1},\"c\":2}", extracted)
     }
+
+    @Test
+    fun parsesNewGuidanceFieldsWhenPresent() {
+        val json = """
+            {"sceneType":"food","compositionScore":64,"suggestedDirection":"none",
+             "subjectPoint":{"x":0.6,"y":0.4},
+             "recommendedAction":"reposition",
+             "primaryGuidance":"Food shot — nudge your subject onto a rule-of-thirds line."}
+        """.trimIndent()
+        val r = CompositionJsonMapper.parse(json)!!
+        assertEquals(NormalizedPoint(0.6f, 0.4f), r.subjectPoint)
+        assertEquals(RecommendedAction.REPOSITION, r.recommendedAction)
+        assertEquals(
+            "Food shot — nudge your subject onto a rule-of-thirds line.",
+            r.primaryGuidance
+        )
+    }
+
+    @Test
+    fun dropsMissingGuidanceFieldsForBackwardCompat() {
+        val r = CompositionJsonMapper.parse(
+            """{"sceneType":"landscape","compositionScore":80}"""
+        )!!
+        assertNull(r.subjectPoint)
+        assertNull(r.recommendedAction)
+        assertNull(r.primaryGuidance)
+    }
+
+    @Test
+    fun clampsSubjectPointIntoUnitSquare() {
+        val r = CompositionJsonMapper.parse(
+            """{"subjectPoint":{"x":1.4,"y":-0.2}}"""
+        )!!
+        assertEquals(NormalizedPoint(1f, 0f), r.subjectPoint)
+    }
+
+    @Test
+    fun dropsActionWhenUnrecognized() {
+        val r = CompositionJsonMapper.parse(
+            """{"recommendedAction":"wobble"}"""
+        )!!
+        assertEquals(RecommendedAction.NONE, r.recommendedAction)
+    }
+}
 }

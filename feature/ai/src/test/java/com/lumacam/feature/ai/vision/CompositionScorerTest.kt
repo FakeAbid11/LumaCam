@@ -1,69 +1,58 @@
 package com.lumacam.feature.ai.vision
 
-import com.lumacam.feature.ai.MoveDirection
-import com.lumacam.feature.ai.SceneType
+import com.lumacam.feature.ai.NormalizedPoint
+import com.lumacam.feature.ai.RecommendedAction
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * Verifies the staged-reveal fields produced by [CompositionScorer]: the subject
+ * point, the recommended one-tap action, and the narrated guidance line. All pure
+ * JVM logic, so no Android/Robolectric needed.
+ */
 class CompositionScorerTest {
 
-    private fun subjectAt(cx: Float, cy: Float, half: Float = 0.05f) = DetectionOutput(
-        subjects = listOf(
-            DetectedSubject(
-                type = SubjectType.OBJECT,
-                box = NormalizedBox(cx - half, cy - half, cx + half, cy + half),
-                confidence = 0.9f
-            )
+    private fun detectionWith(box: NormalizedBox): DetectionOutput =
+        DetectionOutput(
+            subjects = listOf(DetectedSubject(SubjectType.OBJECT, box, 0.9f, "cat")),
+            labels = listOf("cat")
         )
-    )
 
     @Test
-    fun noSubjectFallsBackToTiltAndBalance() {
-        val result = CompositionScorer.score(DetectionOutput(), tiltDegrees = 0f, brightness = 0.5f)
-        assertEquals(84, result.compositionScore)
-        assertEquals(MoveDirection.NONE, result.suggestedDirection)
-        assertNull(result.targetCrop)
-        assertEquals(SceneType.UNKNOWN, result.sceneType)
-        assertTrue(result.suggestions.any { it.contains("Point at your subject") })
+    fun noSubject_recommendsRepositionAndNoPoint() {
+        val result = CompositionScorer.score(DetectionOutput(), 0f, 0.5f)
+        assertNull(result.subjectPoint)
+        assertEquals(RecommendedAction.REPOSITION, result.recommendedAction)
+        assertTrue(result.primaryGuidance?.isNotEmpty() == true)
     }
 
     @Test
-    fun subjectOnIntersectionScoresPerfect() {
-        val result = CompositionScorer.score(
-            subjectAt(1f / 3f, 1f / 3f), tiltDegrees = 0f, brightness = 0.5f
-        )
-        assertEquals(100, result.compositionScore)
-        assertEquals(MoveDirection.NONE, result.suggestedDirection)
-        assertNull(result.targetCrop)
+    fun smallSubject_recommendsZoomInWithCenterPoint() {
+        // 0.04 area -> below the SMALL_SUBJECT_AREA threshold.
+        val box = NormalizedBox(0.48f, 0.48f, 0.52f, 0.52f)
+        val result = CompositionScorer.score(detectionWith(box), 0f, 0.5f)
+        assertEquals(NormalizedPoint(0.5f, 0.5f), result.subjectPoint)
+        assertEquals(RecommendedAction.ZOOM_IN, result.recommendedAction)
     }
 
     @Test
-    fun centeredSubjectIsScoredAndCropped() {
-        val result = CompositionScorer.score(
-            subjectAt(0.5f, 0.5f), tiltDegrees = 0f, brightness = 0.5f
-        )
-        assertEquals(75, result.compositionScore)
-        assertEquals(MoveDirection.LEFT, result.suggestedDirection)
-        assertNotNull(result.targetCrop)
+    fun wellPlacedLargeSubject_recommendsHoldAndShoot() {
+        val half = 0.25f
+        val cx = 1f / 3f
+        val cy = 1f / 3f
+        val box = NormalizedBox(cx - half, cy - half, cx + half, cy + half)
+        val result = CompositionScorer.score(detectionWith(box), 0f, 0.5f)
+        assertEquals(NormalizedPoint(cx, cy), result.subjectPoint)
+        assertEquals(RecommendedAction.HOLD_AND_SHOOT, result.recommendedAction)
     }
 
     @Test
-    fun tiltProducesStraightenTipFirst() {
-        val result = CompositionScorer.score(
-            subjectAt(1f / 3f, 1f / 3f), tiltDegrees = 8f, brightness = 0.5f
-        )
-        assertEquals(8f, result.tiltAngle, 0f)
-        assertTrue(result.suggestions.first().startsWith("Straighten"))
-    }
-
-    @Test
-    fun suggestionsAreCappedAtThree() {
-        val tips = CompositionScorer.buildSuggestions(
-            primary = null, placement = 0, tiltDegrees = 8f, brightness = 0.05f
-        )
-        assertEquals(3, tips.size)
+    fun guidanceMentionsAction() {
+        val box = NormalizedBox(0.48f, 0.48f, 0.52f, 0.52f)
+        val result = CompositionScorer.score(detectionWith(box), 0f, 0.5f)
+        val guidance = result.primaryGuidance.orEmpty()
+        assertTrue(guidance.contains("zoom in", ignoreCase = true))
     }
 }

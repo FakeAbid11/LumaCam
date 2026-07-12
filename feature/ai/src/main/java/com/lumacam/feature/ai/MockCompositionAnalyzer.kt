@@ -1,6 +1,8 @@
 package com.lumacam.feature.ai
 
 import android.graphics.Bitmap
+import com.lumacam.feature.ai.NormalizedPoint
+import com.lumacam.feature.ai.RecommendedAction
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -41,7 +43,10 @@ class MockCompositionAnalyzer : CompositionAnalyzer {
                 "Lower the camera a touch for a stronger eye line.",
                 "Great separation from the background — hold steady."
             ),
-            targetCrop = CropBounds(left = 0.32f, top = 0.14f, right = 0.94f, bottom = 0.92f)
+            targetCrop = CropBounds(left = 0.32f, top = 0.14f, right = 0.94f, bottom = 0.92f),
+            subjectPoint = NormalizedPoint(x = 0.6f, y = 0.4f),
+            recommendedAction = RecommendedAction.REPOSITION,
+            primaryGuidance = "Portrait subject — nudge your subject onto a rule-of-thirds line for a stronger frame. Even, flattering light."
         )
     }
 }

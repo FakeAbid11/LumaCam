@@ -11,6 +11,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -68,6 +69,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -84,14 +86,19 @@ import androidx.navigation.NavHostController
 import android.net.Uri
 import com.lumacam.app.navigation.Routes
 import com.lumacam.app.ui.camera.hud.AiAssistantSheetContent
+import com.lumacam.app.ui.camera.hud.AimPointOverlay
 import com.lumacam.app.ui.camera.hud.AnalyzingOverlay
 import com.lumacam.app.ui.camera.hud.CompositionGridOverlay
 import com.lumacam.app.ui.camera.hud.DirectionalArrowOverlay
 import com.lumacam.app.ui.camera.hud.GhostCropOverlay
+import com.lumacam.app.ui.camera.hud.GuidanceCaption
 import com.lumacam.app.ui.camera.hud.HorizonOverlay
+import com.lumacam.app.ui.camera.hud.RecommendedActionButton
+import com.lumacam.app.ui.camera.hud.SubjectLockBadge
 import com.lumacam.core.camera.FlashMode
 import com.lumacam.core.ui.components.LumaBottomSheet
 import com.lumacam.core.ui.theme.LumaAccent
+import com.lumacam.feature.ai.RecommendedAction
 import kotlinx.coroutines.delay
 
 private const val CONTROLS_HIDE_DELAY_MS = 4000L
@@ -136,6 +143,11 @@ private fun CameraContent(
     var gridEnabled by remember { mutableStateOf(false) }
     var showAiSheet by remember { mutableStateOf(false) }
     var captureMode by remember { mutableStateOf(CaptureMode.PHOTO) }
+    // Staged-reveal flags: scan -> aim point -> subject lock -> caption -> action.
+    var revealAim by remember { mutableStateOf(false) }
+    var revealLock by remember { mutableStateOf(false) }
+    var revealCaption by remember { mutableStateOf(false) }
+    var revealAction by remember { mutableStateOf(false) }
     var captureKey by remember { mutableIntStateOf(0) }
     // MutableState so changing it only recomposes the chrome, not the whole tree.
     var controlsVisible by remember { mutableStateOf(true) }
@@ -178,6 +190,21 @@ private fun CameraContent(
             if (result.compositionScore >= 100) {
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             }
+            // Stage the reveal so the HUD unfolds step by step: scan card (already
+            // shown by AnalyzingOverlay) -> aim point -> subject lock -> caption ->
+            // one-tap action.
+            revealAim = true
+            delay(350)
+            revealLock = true
+            delay(350)
+            revealCaption = true
+            delay(350)
+            revealAction = true
+        } else {
+            revealAim = false
+            revealLock = false
+            revealCaption = false
+            revealAction = false
         }
     }
 
@@ -268,6 +295,20 @@ private fun CameraContent(
                     direction = result.suggestedDirection,
                     reducedMotion = lowEndMode
                 )
+                result.subjectPoint?.let { point ->
+                    AnimatedVisibility(
+                        visible = revealAim,
+                        enter = fadeIn(animationSpec = tween(300))
+                    ) {
+                        AimPointOverlay(point = point, reducedMotion = lowEndMode)
+                    }
+                    AnimatedVisibility(
+                        visible = revealLock,
+                        enter = fadeIn(animationSpec = tween(300))
+                    ) {
+                        SubjectLockBadge(point = point)
+                    }
+                }
             }
         hudState.stage?.let { stage ->
             AnimatedVisibility(
@@ -447,8 +488,56 @@ private fun CameraContent(
         }
     }
 
+    // Staged-reveal caption + one-tap action, drawn on top of the assistant sheet
+    // (which auto-opens) so the Doka-Cam-style guidance stays visible and tappable.
+    hudState.result?.let { result ->
+        AnimatedVisibility(
+            visible = revealCaption && result.primaryGuidance != null,
+            enter = fadeIn(animationSpec = tween(300))
+        ) {
+            result.primaryGuidance?.let { GuidanceCaption(text = it) }
+        }
+        AnimatedVisibility(
+            visible = revealAction && result.recommendedAction != null,
+            enter = fadeIn(animationSpec = tween(300))
+        ) {
+            result.recommendedAction?.let { action ->
+                RecommendedActionButton(
+                    action = action,
+                    onClick = { handleAiAction(action, viewModel, haptic) }
+                )
+            }
+        }
+    }
+
     fullScreenMedia?.let { uri ->
         MediaViewer(uri = uri, onDismiss = { fullScreenMedia = null })
+    }
+}
+
+/**
+ * Dispatches the model's recommended [action] to the real camera affordances.
+ * [haptic] gives tactile confirmation; zoom maps to [CameraViewModel.setZoomRatio],
+ * hold-and-shoot triggers a capture, and reposition re-uses the directional arrow
+ * already shown on the HUD.
+ */
+private fun handleAiAction(
+    action: RecommendedAction,
+    viewModel: CameraViewModel,
+    haptic: HapticFeedback
+) {
+    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+    when (action) {
+        RecommendedAction.ZOOM_IN -> {
+            val z = viewModel.zoomState.value ?: return
+            viewModel.setZoomRatio((z.zoomRatio * 1.4f).coerceAtMost(z.maxZoomRatio))
+        }
+        RecommendedAction.ZOOM_OUT -> {
+            val z = viewModel.zoomState.value ?: return
+            viewModel.setZoomRatio((z.zoomRatio / 1.4f).coerceAtLeast(z.minZoomRatio))
+        }
+        RecommendedAction.HOLD_AND_SHOOT -> viewModel.capturePhoto { }
+        RecommendedAction.REPOSITION, RecommendedAction.NONE -> {}
     }
 }
 

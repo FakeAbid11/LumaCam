@@ -12,6 +12,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,6 +29,12 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.OpenWith
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -44,6 +51,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,6 +59,8 @@ import com.lumacam.core.ui.theme.LumaAccent
 import com.lumacam.feature.ai.AnalysisStage
 import com.lumacam.feature.ai.CropBounds
 import com.lumacam.feature.ai.MoveDirection
+import com.lumacam.feature.ai.NormalizedPoint
+import com.lumacam.feature.ai.RecommendedAction
 import kotlin.math.roundToInt
 
 private val LevelColor = LumaAccent
@@ -251,6 +261,136 @@ fun AnalyzingOverlay(current: AnalysisStage, modifier: Modifier = Modifier) {
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * Pulsing reticle marking the detected subject at [point] (normalized [0,1]).
+ * The pulse is dropped on [reducedMotion] devices, matching the directional arrow.
+ */
+@Composable
+fun AimPointOverlay(
+    point: NormalizedPoint,
+    modifier: Modifier = Modifier,
+    reducedMotion: Boolean = false
+) {
+    val scale: Float = if (reducedMotion) {
+        1f
+    } else {
+        rememberInfiniteTransition(label = "aimPulse").animateFloat(
+            initialValue = 1f,
+            targetValue = 1.35f,
+            animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+            label = "aimPulseAnim"
+        ).value
+    }
+    Canvas(modifier = modifier.fillMaxSize()) {
+        val cx = point.x * size.width
+        val cy = point.y * size.height
+        val base = 24.dp.toPx()
+        drawCircle(
+            color = LumaAccent,
+            radius = base * scale,
+            style = Stroke(width = 2.dp.toPx())
+        )
+        drawCircle(color = LumaAccent, radius = 3.dp.toPx())
+        val tick = 6.dp.toPx()
+        drawLine(LumaAccent, Offset(cx - base * 1.4f, cy), Offset(cx - base * 1.4f + tick, cy), Stroke(width = 2.dp.toPx()))
+        drawLine(LumaAccent, Offset(cx + base * 1.4f, cy), Offset(cx + base * 1.4f - tick, cy), Stroke(width = 2.dp.toPx()))
+        drawLine(LumaAccent, Offset(cx, cy - base * 1.4f), Offset(cx, cy - base * 1.4f + tick), Stroke(width = 2.dp.toPx()))
+        drawLine(LumaAccent, Offset(cx, cy + base * 1.4f), Offset(cx, cy + base * 1.4f - tick), Stroke(width = 2.dp.toPx()))
+    }
+}
+
+/**
+ * Small "Subject" badge near the detected point, confirming the lock.
+ */
+@Composable
+fun SubjectLockBadge(
+    point: NormalizedPoint,
+    modifier: Modifier = Modifier
+) {
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val x = (point.x * maxWidth.value).dp
+        val y = (point.y * maxHeight.value).dp
+        Box(
+            Modifier
+                .offset(x + 30.dp, y - 12.dp)
+                .background(Color(0xCC121218), RoundedCornerShape(8.dp))
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Filled.Check,
+                    contentDescription = null,
+                    tint = LumaAccent,
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(Modifier.width(4.dp))
+                Text("Subject", color = Color.White, fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+/**
+ * One-line narrated reasoning shown beneath the overlays. Callers wrap this in
+ * [AnimatedVisibility] to stage its entrance.
+ */
+@Composable
+fun GuidanceCaption(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier
+            .fillMaxSize()
+            .padding(bottom = 100.dp, start = 24.dp, end = 24.dp),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Text(
+            text = text,
+            color = Color.White,
+            fontSize = 14.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .background(Color(0xCC121218), RoundedCornerShape(14.dp))
+                .padding(horizontal = 16.dp, vertical = 10.dp)
+        )
+    }
+}
+
+/**
+ * Prominent one-tap affordance for the [action] the model recommends. Disappears
+ * for [RecommendedAction.NONE] (nothing actionable to suggest).
+ */
+@Composable
+fun RecommendedActionButton(
+    action: RecommendedAction,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (action == RecommendedAction.NONE) return
+    val (icon, label) = when (action) {
+        RecommendedAction.ZOOM_IN -> Icons.Filled.ZoomIn to "Zoom in"
+        RecommendedAction.ZOOM_OUT -> Icons.Filled.ZoomOut to "Zoom out"
+        RecommendedAction.REPOSITION -> Icons.Filled.OpenWith to "Reposition"
+        RecommendedAction.HOLD_AND_SHOOT -> Icons.Filled.PhotoCamera to "Hold & shoot"
+        RecommendedAction.NONE -> Icons.Filled.Check to "Looks good"
+    }
+    Box(
+        modifier.fillMaxSize().padding(bottom = 24.dp),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Button(
+            onClick = onClick,
+            shape = RoundedCornerShape(24.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = LumaAccent)
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(label, color = Color.Black, fontWeight = FontWeight.SemiBold)
         }
     }
 }
