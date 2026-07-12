@@ -10,7 +10,6 @@ import android.net.Uri
 import android.util.Log
 import android.annotation.SuppressLint
 import androidx.camera.core.ImageProxy
-import androidx.camera.core.toBitmap
 import java.util.concurrent.atomic.AtomicReference
 import androidx.annotation.OptIn
 import androidx.camera.camera2.interop.Camera2CameraControl
