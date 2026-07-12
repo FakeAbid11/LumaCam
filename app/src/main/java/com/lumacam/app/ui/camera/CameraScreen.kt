@@ -1,5 +1,6 @@
 package com.lumacam.app.ui.camera
 
+import android.content.Context
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import android.view.GestureDetector
@@ -294,7 +295,7 @@ private fun CameraContent(
                 onSwitchLens = { viewModel.toggleLens(); interactionTick++ },
                 onPro = { showPro = true; interactionTick++ },
                 onToggleGrid = { gridEnabled = !gridEnabled; interactionTick++ },
-                onDemo = {
+                onAnalyze = {
                     interactionTick++
                     viewModel.captureAnalysisFrame { bitmap, rotation ->
                         if (bitmap != null) hudViewModel.startAnalysis(bitmap, rotation)
