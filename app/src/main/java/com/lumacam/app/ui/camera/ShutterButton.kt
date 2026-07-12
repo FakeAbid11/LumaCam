@@ -29,7 +29,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
-import com.lumacam.core.ui.theme.LumaAccent
+import com.lumacam.core.ui.theme.LumaGradient
 
 private val RecordRed = Color(0xFFFF3B30)
 
@@ -131,7 +131,8 @@ fun ShutterButton(
                 val arcSize = Size(diameter, diameter)
                 if (glowAlpha > 0f) {
                     drawArc(
-                        color = LumaAccent.copy(alpha = 0.4f * glowAlpha),
+                        brush = LumaGradient.aiAccent,
+                        alpha = 0.4f * glowAlpha,
                         startAngle = -90f,
                         sweepAngle = 360f * animatedScore,
                         useCenter = false,
@@ -150,7 +151,7 @@ fun ShutterButton(
                     style = Stroke(width = ringStroke)
                 )
                 drawArc(
-                    color = LumaAccent,
+                    brush = LumaGradient.aiAccent,
                     startAngle = -90f,
                     sweepAngle = 360f * animatedScore,
                     useCenter = false,

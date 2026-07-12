@@ -15,6 +15,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -66,7 +67,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedback
@@ -96,8 +99,12 @@ import com.lumacam.app.ui.camera.hud.HorizonOverlay
 import com.lumacam.app.ui.camera.hud.RecommendedActionButton
 import com.lumacam.app.ui.camera.hud.SubjectLockBadge
 import com.lumacam.core.camera.FlashMode
+import com.lumacam.core.ui.components.GradientIcon
 import com.lumacam.core.ui.components.LumaBottomSheet
 import com.lumacam.core.ui.theme.LumaAccent
+import com.lumacam.core.ui.theme.LumaColors
+import com.lumacam.core.ui.theme.LumaShapes
+import com.lumacam.core.ui.theme.LumaSpacing
 import com.lumacam.feature.ai.RecommendedAction
 import kotlinx.coroutines.delay
 
@@ -265,7 +272,17 @@ private fun CameraContent(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    Box(Modifier.fillMaxSize().background(LumaColors.chromeBlack)) {
+        // Floating preview card on solid black chrome (Doka-Cam style): the
+        // camera surface is a rounded rectangle inset on black, not edge-to-edge.
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(LumaSpacing.md)
+                .clip(LumaShapes.extraLarge)
+                .border(1.dp, Color(0x22FFFFFF), LumaShapes.extraLarge)
+                .background(LumaColors.chromeBlack)
+        ) {
         AndroidView(
             factory = { ctx ->
                 PreviewView(ctx).also { previewViewState.value = it }
@@ -318,6 +335,7 @@ private fun CameraContent(
             ) {
                 AnalyzingOverlay(current = stage)
             }
+        }
         }
 
         // Top chrome — fades with relevance.
@@ -558,6 +576,30 @@ private fun CaptureFlashOverlay(
     }
 }
 
+/**
+ * Hexagonal settings affordance (Doka-Cam visual language) replacing the default
+ * gear. Drawn as a stroked hexagon outline; the surrounding [IconButton] handles
+ * the tap. Neutral white tint — it is a utility, not an AI-active control.
+ */
+@Composable
+private fun HexSettingsIcon(modifier: Modifier = Modifier, tint: Color = Color.White) {
+    Canvas(modifier = modifier.size(24.dp)) {
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+        val r = size.minDimension / 2f * 0.92f
+        val path = Path().apply {
+            for (i in 0..5) {
+                val angle = Math.toRadians(60.0 * i - 90.0)
+                val x = cx + r * kotlin.math.cos(angle).toFloat()
+                val y = cy + r * kotlin.math.sin(angle).toFloat()
+                if (i == 0) moveTo(x, y) else lineTo(x, y)
+            }
+            close()
+        }
+        drawPath(path, color = tint, style = Stroke(width = 2.dp.toPx()))
+    }
+}
+
 @Composable
 private fun TopBar(
     flashMode: Int,
@@ -583,7 +625,7 @@ private fun TopBar(
         // Real Luma Vision analysis: taps grab a live preview frame and run it
         // through the on-device analyzer (BUG 1).
         IconButton(onClick = onAnalyze) {
-            Icon(Icons.Filled.AutoAwesome, "Analyze scene", tint = LumaAccent)
+            GradientIcon(Icons.Filled.AutoAwesome, "Analyze scene", modifier = Modifier.size(24.dp))
         }
         IconButton(onClick = onToggleGrid) {
             Icon(
@@ -600,15 +642,15 @@ private fun TopBar(
         }
         if (showProAvailable) {
             IconButton(onClick = onPro) {
-                Icon(
-                    Icons.Filled.Tune,
-                    "Pro controls",
-                    tint = if (proActive) LumaAccent else Color.White
-                )
+                if (proActive) {
+                    GradientIcon(Icons.Filled.Tune, "Pro controls", modifier = Modifier.size(24.dp))
+                } else {
+                    Icon(Icons.Filled.Tune, "Pro controls", tint = Color.White)
+                }
             }
         }
         IconButton(onClick = onSettings) {
-            Icon(Icons.Filled.Settings, "Settings", tint = Color.White)
+            HexSettingsIcon()
         }
     }
 }
@@ -625,10 +667,9 @@ private fun AiModeIndicator() {
             .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
+        GradientIcon(
             Icons.Filled.Bolt,
             contentDescription = null,
-            tint = LumaAccent,
             modifier = Modifier.size(18.dp)
         )
         Spacer(Modifier.size(4.dp))

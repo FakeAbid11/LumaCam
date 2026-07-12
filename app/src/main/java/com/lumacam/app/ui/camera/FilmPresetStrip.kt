@@ -24,7 +24,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -88,6 +90,20 @@ private fun PresetChip(preset: FilmPreset, selected: Boolean, onClick: () -> Uni
                 )
         ) {
             drawRect(brush = REFERENCE_GRADIENT, colorFilter = colorFilter)
+            // Subtle generic analog-reel motif (unbranded) evoking tape/reel film
+            // aesthetics, so each preset chip reads as "film" rather than a plain
+            // swatch. Decorative only.
+            val reelColor = Color.White.copy(alpha = 0.42f)
+            val cyReel = size.height * 0.5f
+            val lx = size.width * 0.34f
+            val rx = size.width * 0.66f
+            val reelR = size.minDimension * 0.17f
+            val stroke = Stroke(width = 1.4.dp.toPx())
+            drawCircle(reelColor, radius = reelR, center = Offset(lx, cyReel), style = stroke)
+            drawCircle(reelColor, radius = reelR, center = Offset(rx, cyReel), style = stroke)
+            drawCircle(reelColor, radius = reelR * 0.28f, center = Offset(lx, cyReel))
+            drawCircle(reelColor, radius = reelR * 0.28f, center = Offset(rx, cyReel))
+            drawLine(reelColor, Offset(lx, cyReel), Offset(rx, cyReel), strokeWidth = 1.4.dp.toPx())
         }
         Spacer(Modifier.height(4.dp))
         Text(

@@ -55,7 +55,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lumacam.core.ui.components.GradientIcon
 import com.lumacam.core.ui.theme.LumaAccent
+import com.lumacam.core.ui.theme.LumaColors
+import com.lumacam.core.ui.theme.LumaGradient
 import com.lumacam.feature.ai.AnalysisStage
 import com.lumacam.feature.ai.CropBounds
 import com.lumacam.feature.ai.MoveDirection
@@ -63,8 +66,8 @@ import com.lumacam.feature.ai.NormalizedPoint
 import com.lumacam.feature.ai.RecommendedAction
 import kotlin.math.roundToInt
 
-private val LevelColor = LumaAccent
-private val OffLevelColor = Color(0xCCFFFFFF)
+private val LevelColor = LumaColors.horizonLevel
+private val OffLevelColor = LumaColors.horizonOffLevel
 private val GridColor = Color(0x40FFFFFF)
 
 /**
@@ -125,13 +128,13 @@ fun GhostCropOverlay(bounds: CropBounds, modifier: Modifier = Modifier) {
             right = bounds.right * size.width,
             bottom = bounds.bottom * size.height
         )
-        val dim = Color(0x66000000)
-        drawRect(dim, topLeft = Offset.Zero, size = Size(size.width, rect.top))
-        drawRect(dim, topLeft = Offset(0f, rect.bottom), size = Size(size.width, size.height - rect.bottom))
-        drawRect(dim, topLeft = Offset(0f, rect.top), size = Size(rect.left, rect.height))
-        drawRect(dim, topLeft = Offset(rect.right, rect.top), size = Size(size.width - rect.right, rect.height))
+        val dim = LumaGradient.scrim
+        drawRect(brush = dim, topLeft = Offset.Zero, size = Size(size.width, rect.top))
+        drawRect(brush = dim, topLeft = Offset(0f, rect.bottom), size = Size(size.width, size.height - rect.bottom))
+        drawRect(brush = dim, topLeft = Offset(0f, rect.top), size = Size(rect.left, rect.height))
+        drawRect(brush = dim, topLeft = Offset(rect.right, rect.top), size = Size(size.width - rect.right, rect.height))
         drawRect(
-            color = LumaAccent,
+            brush = LumaGradient.aiAccent,
             topLeft = Offset(rect.left, rect.top),
             size = Size(rect.width, rect.height),
             style = Stroke(
@@ -198,10 +201,10 @@ fun DirectionalArrowOverlay(
                 Modifier
                     .offset { IntOffset(dx.roundToInt(), dy.roundToInt()) }
                     .size(52.dp)
-                    .background(Color(0x55000000), CircleShape),
+                    .background(LumaGradient.scrim, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = "Move", tint = LumaAccent, modifier = Modifier.size(30.dp))
+                GradientIcon(icon, contentDescription = "Move", modifier = Modifier.size(30.dp))
             }
         }
     }
@@ -221,7 +224,7 @@ fun AnalyzingOverlay(current: AnalysisStage, modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             modifier = Modifier
-                .background(Color(0xE6121218), RoundedCornerShape(20.dp))
+                .background(LumaGradient.scrim, RoundedCornerShape(20.dp))
                 .padding(horizontal = 24.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -237,10 +240,9 @@ fun AnalyzingOverlay(current: AnalysisStage, modifier: Modifier = Modifier) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) {
                         when {
-                            done -> Icon(
+                            done -> GradientIcon(
                                 Icons.Filled.Check,
                                 contentDescription = null,
-                                tint = LumaAccent,
                                 modifier = Modifier.size(18.dp)
                             )
                             active -> CircularProgressIndicator(
@@ -290,16 +292,16 @@ fun AimPointOverlay(
         val cy = point.y * size.height
         val base = 24.dp.toPx()
         drawCircle(
-            color = LumaAccent,
+            brush = LumaGradient.aiAccent,
             radius = base * scale,
             style = Stroke(width = 2.dp.toPx())
         )
-        drawCircle(color = LumaAccent, radius = 3.dp.toPx())
+        drawCircle(brush = LumaGradient.aiAccent, radius = 3.dp.toPx())
         val tick = 6.dp.toPx()
-        drawLine(LumaAccent, Offset(cx - base * 1.4f, cy), Offset(cx - base * 1.4f + tick, cy), strokeWidth = 2.dp.toPx())
-        drawLine(LumaAccent, Offset(cx + base * 1.4f, cy), Offset(cx + base * 1.4f - tick, cy), strokeWidth = 2.dp.toPx())
-        drawLine(LumaAccent, Offset(cx, cy - base * 1.4f), Offset(cx, cy - base * 1.4f + tick), strokeWidth = 2.dp.toPx())
-        drawLine(LumaAccent, Offset(cx, cy + base * 1.4f), Offset(cx, cy + base * 1.4f - tick), strokeWidth = 2.dp.toPx())
+        drawLine(LumaGradient.aiAccent, Offset(cx - base * 1.4f, cy), Offset(cx - base * 1.4f + tick, cy), strokeWidth = 2.dp.toPx())
+        drawLine(LumaGradient.aiAccent, Offset(cx + base * 1.4f, cy), Offset(cx + base * 1.4f - tick, cy), strokeWidth = 2.dp.toPx())
+        drawLine(LumaGradient.aiAccent, Offset(cx, cy - base * 1.4f), Offset(cx, cy - base * 1.4f + tick), strokeWidth = 2.dp.toPx())
+        drawLine(LumaGradient.aiAccent, Offset(cx, cy + base * 1.4f), Offset(cx, cy + base * 1.4f - tick), strokeWidth = 2.dp.toPx())
     }
 }
 
@@ -317,14 +319,13 @@ fun SubjectLockBadge(
         Box(
             Modifier
                 .offset(x + 30.dp, y - 12.dp)
-                .background(Color(0xCC121218), RoundedCornerShape(8.dp))
+                .background(LumaGradient.scrim, RoundedCornerShape(8.dp))
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
+                GradientIcon(
                     Icons.Filled.Check,
                     contentDescription = null,
-                    tint = LumaAccent,
                     modifier = Modifier.size(14.dp)
                 )
                 Spacer(Modifier.width(4.dp))
@@ -355,7 +356,7 @@ fun GuidanceCaption(
             fontSize = 14.sp,
             textAlign = TextAlign.Center,
             modifier = Modifier
-                .background(Color(0xCC121218), RoundedCornerShape(14.dp))
+                .background(LumaGradient.scrim, RoundedCornerShape(14.dp))
                 .padding(horizontal = 16.dp, vertical = 10.dp)
         )
     }
@@ -386,9 +387,11 @@ fun RecommendedActionButton(
         Button(
             onClick = onClick,
             shape = RoundedCornerShape(24.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = LumaAccent)
+            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+            elevation = ButtonDefaults.buttonElevation(0.dp, 0.dp, 0.dp, 0.dp, 0.dp),
+            modifier = Modifier.background(LumaGradient.aiAccent, RoundedCornerShape(24.dp))
         ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
+            Icon(icon, contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
             Text(label, color = Color.Black, fontWeight = FontWeight.SemiBold)
         }
