@@ -16,11 +16,18 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.*
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
+import androidx.core.util.Consumer
 import androidx.lifecycle.LifecycleOwner
+import com.lumacam.core.camera.film.FilmCameraEffect
+import com.lumacam.core.camera.film.FilmPhotoBaker
+import com.lumacam.core.camera.film.FilmSurfaceProcessor
+import com.lumacam.core.common.film.FilmPreset
+import com.lumacam.core.common.film.FilmPresetCatalog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
+import java.util.concurrent.Executors
 import javax.inject.Inject
 import dagger.hilt.android.qualifiers.ApplicationContext
 
@@ -72,6 +79,17 @@ class LumaCameraController @Inject constructor(
     private val _availableLenses = MutableStateFlow<List<LensInfo>>(emptyList())
     val availableLenses: StateFlow<List<LensInfo>> = _availableLenses.asStateFlow()
 
+    // ---- Film Camera Engine ----------------------------------------------------
+    private val _filmPreset = MutableStateFlow(FilmPresetCatalog.default)
+    val filmPreset: StateFlow<FilmPreset> = _filmPreset.asStateFlow()
+
+    private val _previewFilterEnabled = MutableStateFlow(true)
+    val previewFilterEnabled: StateFlow<Boolean> = _previewFilterEnabled.asStateFlow()
+
+    private var filmProcessor: FilmSurfaceProcessor? = null
+    private val photoBaker = FilmPhotoBaker()
+    private val bakeExecutor = Executors.newSingleThreadExecutor()
+
     @SuppressLint("MissingPermission")
     fun bind(previewView: PreviewView, lifecycleOwner: LifecycleOwner) {
         boundPreviewView = previewView
@@ -117,9 +135,22 @@ class LumaCameraController @Inject constructor(
         val selector = buildSelector()
 
         try {
-            camera = provider.bindToLifecycle(
-                lifecycleOwner, selector, previewUC, imageCaptureUC, videoCaptureUC, imageAnalysis
-            )
+            camera = if (_filmPreset.value.isIdentity) {
+                filmProcessor?.release()
+                filmProcessor = null
+                provider.bindToLifecycle(
+                    lifecycleOwner, selector, previewUC, imageCaptureUC, videoCaptureUC, imageAnalysis
+                )
+            } else {
+                val group = UseCaseGroup.Builder()
+                    .addUseCase(previewUC)
+                    .addUseCase(imageCaptureUC)
+                    .addUseCase(videoCaptureUC)
+                    .addUseCase(imageAnalysis)
+                    .addEffect(buildFilmEffect())
+                    .build()
+                provider.bindToLifecycle(lifecycleOwner, selector, group)
+            }
             preview = previewUC
             imageCapture = imageCaptureUC
             videoCapture = videoCaptureUC
@@ -130,6 +161,49 @@ class LumaCameraController @Inject constructor(
             _bindingError.value = e.message
             Log.e(TAG, "use case binding failed", e)
         }
+    }
+
+    /**
+     * Wrap the shared [FilmSurfaceProcessor] in a [CameraEffect]. VIDEO_CAPTURE is
+     * always filtered (baked video); PREVIEW is filtered only when live filtering is
+     * enabled (off by default on low-tier devices). Still photos are baked separately
+     * by [FilmPhotoBaker], so IMAGE_CAPTURE is never targeted.
+     */
+    private fun buildFilmEffect(): FilmCameraEffect {
+        val processor = ensureFilmProcessor()
+        processor.currentPreset = _filmPreset.value
+        var targets = CameraEffect.VIDEO_CAPTURE
+        if (_previewFilterEnabled.value) targets = targets or CameraEffect.PREVIEW
+        val errorListener = Consumer<Throwable> { t ->
+            Log.e(TAG, "film effect error", t)
+            _bindingError.value = t.message
+        }
+        return FilmCameraEffect(processor, targets, errorListener)
+    }
+
+    private fun ensureFilmProcessor(): FilmSurfaceProcessor =
+        filmProcessor ?: FilmSurfaceProcessor().also {
+            it.currentPreset = _filmPreset.value
+            filmProcessor = it
+        }
+
+    /**
+     * Select the active film preset. Updates the live GL processor immediately;
+     * rebinds only when crossing the identity boundary (attaching/detaching the
+     * effect from the CameraX pipeline).
+     */
+    fun setFilmPreset(preset: FilmPreset) {
+        val previous = _filmPreset.value
+        _filmPreset.value = preset
+        filmProcessor?.currentPreset = preset
+        if (previous.isIdentity != preset.isIdentity) bindUseCases()
+    }
+
+    /** Toggle live-preview filtering (capture is always full-quality). Rebinds. */
+    fun setPreviewFilterEnabled(enabled: Boolean) {
+        if (_previewFilterEnabled.value == enabled) return
+        _previewFilterEnabled.value = enabled
+        if (!_filmPreset.value.isIdentity) bindUseCases()
     }
 
     /** Build a selector for the current facing, honouring a chosen back lens id. */
@@ -243,8 +317,24 @@ class LumaCameraController @Inject constructor(
             ContextCompat.getMainExecutor(context),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(result: ImageCapture.OutputFileResults) {
-                    _lastMedia.value = file
-                    onResult(file)
+                    val preset = _filmPreset.value
+                    if (preset.isIdentity) {
+                        _lastMedia.value = file
+                        onResult(file)
+                        return
+                    }
+                    // Bake the same film look into the full-res JPEG off the main thread.
+                    bakeExecutor.execute {
+                        try {
+                            photoBaker.bake(file, preset)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "photo bake failed", e)
+                        }
+                        ContextCompat.getMainExecutor(context).execute {
+                            _lastMedia.value = file
+                            onResult(file)
+                        }
+                    }
                 }
 
                 override fun onError(exception: ImageCaptureException) {
@@ -486,6 +576,8 @@ class LumaCameraController @Inject constructor(
         recording = null
         cameraProvider?.unbindAll()
         camera = null
+        filmProcessor?.release()
+        filmProcessor = null
     }
 
     companion object {

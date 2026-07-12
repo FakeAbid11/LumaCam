@@ -24,6 +24,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:common"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.annotation.experimental)
     implementation(libs.hilt.android)

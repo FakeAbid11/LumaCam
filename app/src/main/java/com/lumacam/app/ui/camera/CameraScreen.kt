@@ -41,6 +41,8 @@ import androidx.compose.material.icons.filled.GridOff
 import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
@@ -117,6 +119,8 @@ private fun CameraContent(
     val capabilities by viewModel.capabilities.collectAsState()
     val manualState by viewModel.manualState.collectAsState()
     val lenses by viewModel.availableLenses.collectAsState()
+    val filmPreset by viewModel.filmPreset.collectAsState()
+    val previewFilterEnabled by viewModel.previewFilterEnabled.collectAsState()
     val hudState by hudViewModel.state.collectAsState()
 
     var focusPoint by remember { mutableStateOf<Offset?>(null) }
@@ -321,6 +325,20 @@ private fun CameraContent(
                         }
                     }
                     Spacer(Modifier.size(8.dp))
+                    FilmPresetStrip(
+                        presets = viewModel.filmPresets,
+                        selected = filmPreset,
+                        onSelect = { viewModel.setFilmPreset(it); interactionTick++ },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (!filmPreset.isIdentity) {
+                        Spacer(Modifier.size(8.dp))
+                        PreviewFilterToggle(
+                            enabled = previewFilterEnabled,
+                            onToggle = { viewModel.setPreviewFilterEnabled(it); interactionTick++ }
+                        )
+                    }
+                    Spacer(Modifier.size(12.dp))
                     ModeSwitcher(
                         mode = captureMode,
                         onModeChange = { if (!isRecording) { captureMode = it; interactionTick++ } },
@@ -477,6 +495,32 @@ private fun AiModeIndicator() {
             contentDescription = null,
             tint = Color.White,
             modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+/** Compact toggle for live-preview filtering; capture is always full-quality. */
+@Composable
+private fun PreviewFilterToggle(enabled: Boolean, onToggle: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .background(Color(0x66000000), RoundedCornerShape(50))
+            .clickable { onToggle(!enabled) }
+            .padding(horizontal = 12.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            if (enabled) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+            contentDescription = null,
+            tint = if (enabled) LumaAccent else Color.White,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(Modifier.size(6.dp))
+        Text(
+            if (enabled) "Live filter on" else "Live filter off",
+            color = Color.White,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium
         )
     }
 }
