@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Room
 import com.lumacam.app.data.CaptureDao
 import com.lumacam.app.data.CloudAiKeyStore
+import com.lumacam.app.data.DeviceBenchmarkStore
+import com.lumacam.app.data.DeviceCapabilityProbe
 import com.lumacam.app.data.LocalModelDownloader
 import com.lumacam.app.data.LocalModelRepository
 import com.lumacam.app.data.LocalModelStorage
@@ -86,4 +88,17 @@ object AppModule {
             engine = PlaceholderLocalInferenceEngine(),
             activeModel = { repository.activeModel() }
         )
+
+    // Device AI Compatibility Benchmark (PRD §4). Reads specs and classifies the
+    // device tier; the result is reused by the Local AI Model manager and, later,
+    // the Smart AI Engine (Prompt 10).
+    @Provides
+    @Singleton
+    fun provideDeviceCapabilityProbe(@ApplicationContext context: Context): DeviceCapabilityProbe =
+        DeviceCapabilityProbe(context)
+
+    @Provides
+    @Singleton
+    fun provideDeviceBenchmarkStore(@ApplicationContext context: Context): DeviceBenchmarkStore =
+        DeviceBenchmarkStore(context)
 }

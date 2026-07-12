@@ -103,6 +103,15 @@ fun LocalAiSettingsScreen(
                 )
             }
 
+            if (!state.hasBenchmark) {
+                Text(
+                    "Tip: run the Device AI Benchmark (\"Test My Phone\") in Settings to get " +
+                        "per-model recommendations for your phone.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = LumaGray500
+                )
+            }
+
             if (!state.hasActiveModel) {
                 NoActiveModelNotice()
             }
@@ -178,8 +187,8 @@ private fun ModelCard(
                 color = LumaGray500
             )
 
-            if (!item.meetsRam) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            item.notRecommendedReason?.let { reason ->
+                Row(verticalAlignment = Alignment.Top) {
                     Icon(
                         Icons.Filled.Warning,
                         contentDescription = null,
@@ -187,7 +196,7 @@ private fun ModelCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        "This device may not have enough RAM for this model.",
+                        "Not recommended: $reason",
                         style = MaterialTheme.typography.bodySmall,
                         color = LumaAccent,
                         modifier = Modifier.padding(start = 6.dp)

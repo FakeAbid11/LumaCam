@@ -1,11 +1,13 @@
 package com.lumacam.app.ui.settings
 
-import android.app.ActivityManager
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lumacam.app.data.DeviceBenchmarkStore
 import com.lumacam.app.data.LocalModelDownloader
 import com.lumacam.app.data.LocalModelRepository
+import com.lumacam.feature.ai.benchmark.ModelRecommendation
+import com.lumacam.feature.ai.benchmark.ModelSuitability
 import com.lumacam.feature.ai.local.DownloadState
 import com.lumacam.feature.ai.local.LocalAiOutcome
 import com.lumacam.feature.ai.local.LocalAiProvider
@@ -27,11 +29,19 @@ data class LocalModelUiItem(
     val spec: LocalModelSpec,
     val isDownloaded: Boolean,
     val isActive: Boolean,
-    val meetsRam: Boolean,
+    /**
+     * Tier-driven suitability from the last Device AI Benchmark, or null when no
+     * benchmark has been run yet (show a neutral "run the benchmark" hint instead).
+     */
+    val recommendation: ModelRecommendation? = null,
     val download: DownloadState = DownloadState.Idle
 ) {
     val isDownloading: Boolean get() = download is DownloadState.CheckingSpace ||
         download is DownloadState.Downloading
+
+    /** Concrete reason when the benchmark flags this model as not recommended. */
+    val notRecommendedReason: String?
+        get() = (recommendation as? ModelRecommendation.NotRecommended)?.reason
 }
 
 /** Debug-only "Run test analysis" lifecycle for the on-device provider path. */
@@ -46,6 +56,8 @@ data class LocalAiUiState(
     val availableSpaceLabel: String = "",
     val deviceRamLabel: String = "",
     val hasActiveModel: Boolean = false,
+    /** True once a Device AI Benchmark result exists to drive per-model advice. */
+    val hasBenchmark: Boolean = false,
     val debugState: LocalDebugState = LocalDebugState.Idle
 )
 
@@ -54,14 +66,14 @@ class LocalAiSettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val repository: LocalModelRepository,
     private val downloader: LocalModelDownloader,
-    private val localAiProvider: LocalAiProvider
+    private val localAiProvider: LocalAiProvider,
+    private val benchmarkStore: DeviceBenchmarkStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LocalAiUiState())
     val uiState: StateFlow<LocalAiUiState> = _uiState.asStateFlow()
 
     private val downloadJobs = mutableMapOf<String, Job>()
-    private val deviceRamMb: Int = readDeviceRamMb()
 
     init {
         refresh()
@@ -69,22 +81,29 @@ class LocalAiSettingsViewModel @Inject constructor(
 
     fun refresh() {
         val activeId = repository.activeModelId
+        val benchmark = benchmarkStore.load()
+        val availableBytes = repository.availableBytes()
         val items = repository.catalog.map { spec ->
             val existing = _uiState.value.models.firstOrNull { it.spec.id == spec.id }
+            val recommendation = benchmark?.let {
+                ModelSuitability.evaluate(it.caps, it.tier, spec, availableBytes)
+            }
             LocalModelUiItem(
                 spec = spec,
                 isDownloaded = repository.isDownloaded(spec),
                 isActive = spec.id == activeId && repository.isDownloaded(spec),
-                meetsRam = deviceRamMb == 0 || deviceRamMb >= spec.minRamMb,
+                recommendation = recommendation,
                 download = existing?.download ?: DownloadState.Idle
             )
         }
+        val deviceRamMb = benchmark?.caps?.totalRamMb ?: 0
         _uiState.update {
             it.copy(
                 models = items,
-                availableSpaceLabel = formatBytes(repository.availableBytes()),
+                availableSpaceLabel = formatBytes(availableBytes),
                 deviceRamLabel = if (deviceRamMb > 0) formatBytes(deviceRamMb * 1024L * 1024L) else "",
-                hasActiveModel = items.any { m -> m.isActive }
+                hasActiveModel = items.any { m -> m.isActive },
+                hasBenchmark = benchmark != null
             )
         }
     }
@@ -144,11 +163,4 @@ class LocalAiSettingsViewModel @Inject constructor(
     }
 
     private fun sampleImage(): LocalImage = LocalImage(ByteArray(0), "image/jpeg")
-
-    private fun readDeviceRamMb(): Int = runCatching {
-        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val info = ActivityManager.MemoryInfo()
-        am.getMemoryInfo(info)
-        (info.totalMem / (1024L * 1024L)).toInt()
-    }.getOrDefault(0)
 }

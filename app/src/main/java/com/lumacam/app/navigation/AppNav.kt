@@ -6,6 +6,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.lumacam.app.ui.benchmark.DeviceBenchmarkScreen
 import com.lumacam.app.ui.camera.CameraScreen
 import com.lumacam.app.ui.settings.CloudAiSettingsScreen
 import com.lumacam.app.ui.settings.LocalAiSettingsScreen
@@ -16,6 +17,7 @@ object Routes {
     const val SETTINGS = "settings"
     const val CLOUD_AI_SETTINGS = "cloud_ai_settings"
     const val LOCAL_AI_SETTINGS = "local_ai_settings"
+    const val DEVICE_BENCHMARK = "device_benchmark"
 }
 
 @Composable
@@ -35,7 +37,8 @@ fun AppNav(
             SettingsScreen(
                 onBack = { navController.popBackStack() },
                 onOpenCloudAi = { navController.navigate(Routes.CLOUD_AI_SETTINGS) },
-                onOpenLocalAi = { navController.navigate(Routes.LOCAL_AI_SETTINGS) }
+                onOpenLocalAi = { navController.navigate(Routes.LOCAL_AI_SETTINGS) },
+                onOpenDeviceBenchmark = { navController.navigate(Routes.DEVICE_BENCHMARK) }
             )
         }
         composable(Routes.CLOUD_AI_SETTINGS) {
@@ -43,6 +46,9 @@ fun AppNav(
         }
         composable(Routes.LOCAL_AI_SETTINGS) {
             LocalAiSettingsScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.DEVICE_BENCHMARK) {
+            DeviceBenchmarkScreen(onBack = { navController.popBackStack() })
         }
     }
 }

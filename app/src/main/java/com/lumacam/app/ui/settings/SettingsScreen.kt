@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -39,7 +40,8 @@ import com.lumacam.core.ui.theme.LumaWhite
 fun SettingsScreen(
     onBack: () -> Unit,
     onOpenCloudAi: () -> Unit = {},
-    onOpenLocalAi: () -> Unit = {}
+    onOpenLocalAi: () -> Unit = {},
+    onOpenDeviceBenchmark: () -> Unit = {}
 ) {
     Scaffold(
         containerColor = LumaBlack,
@@ -78,6 +80,13 @@ fun SettingsScreen(
                         subtitle = "Download & run on-device vision models",
                         accent = true,
                         onClick = onOpenLocalAi
+                    )
+                    SettingsRow(
+                        icon = Icons.Filled.Speed,
+                        title = "Device AI Benchmark",
+                        subtitle = "Test My Phone — can it run AI on-device?",
+                        accent = true,
+                        onClick = onOpenDeviceBenchmark
                     )
                 }
             }
