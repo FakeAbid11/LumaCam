@@ -57,7 +57,7 @@ fun SettingsScreen(
     contentViewModel: SettingsContentViewModel = hiltViewModel()
 ) {
     val effectsEnabled by contentViewModel.visualEffectsEnabled.collectAsState(
-        initialValue = null
+        initial = null
     )
     val effectsOn = effectsEnabled ?: contentViewModel.defaultEnabled()
     Scaffold(
