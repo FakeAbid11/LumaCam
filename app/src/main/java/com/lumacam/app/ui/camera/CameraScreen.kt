@@ -80,6 +80,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavHostController
+import android.net.Uri
 import com.lumacam.app.navigation.Routes
 import com.lumacam.app.ui.camera.hud.AiAssistantSheetContent
 import com.lumacam.app.ui.camera.hud.AnalyzingOverlay
@@ -90,7 +91,6 @@ import com.lumacam.app.ui.camera.hud.HorizonOverlay
 import com.lumacam.core.camera.FlashMode
 import com.lumacam.core.ui.components.LumaBottomSheet
 import com.lumacam.core.ui.theme.LumaAccent
-import java.io.File
 import kotlinx.coroutines.delay
 
 private const val CONTROLS_HIDE_DELAY_MS = 4000L
@@ -130,7 +130,7 @@ private fun CameraContent(
     val hudState by hudViewModel.state.collectAsState()
 
     var focusPoint by remember { mutableStateOf<Offset?>(null) }
-    var fullScreenMedia by remember { mutableStateOf<File?>(null) }
+    var fullScreenMedia by remember { mutableStateOf<android.net.Uri?>(null) }
     var showPro by remember { mutableStateOf(false) }
     var gridEnabled by remember { mutableStateOf(false) }
     var showAiSheet by remember { mutableStateOf(false) }
@@ -294,7 +294,12 @@ private fun CameraContent(
                 onSwitchLens = { viewModel.toggleLens(); interactionTick++ },
                 onPro = { showPro = true; interactionTick++ },
                 onToggleGrid = { gridEnabled = !gridEnabled; interactionTick++ },
-                onDemo = { hudViewModel.startAnalysis(); interactionTick++ },
+                onDemo = {
+                    interactionTick++
+                    viewModel.captureAnalysisFrame { bitmap, rotation ->
+                        if (bitmap != null) hudViewModel.startAnalysis(bitmap, rotation)
+                    }
+                },
                 onSettings = { navController?.navigate(Routes.SETTINGS) }
             )
         }
@@ -378,7 +383,7 @@ private fun CameraContent(
 
             Box(Modifier.fillMaxWidth().padding(horizontal = 28.dp)) {
                 GalleryThumbnail(
-                    file = lastMedia,
+                    uri = lastMedia,
                     onClick = { lastMedia?.let { fullScreenMedia = it } },
                     modifier = Modifier.align(Alignment.CenterStart)
                 )
@@ -441,8 +446,8 @@ private fun CameraContent(
         }
     }
 
-    fullScreenMedia?.let { file ->
-        MediaViewer(file = file, onDismiss = { fullScreenMedia = null })
+    fullScreenMedia?.let { uri ->
+        MediaViewer(uri = uri, onDismiss = { fullScreenMedia = null })
     }
 }
 
@@ -473,7 +478,7 @@ private fun TopBar(
     onSwitchLens: () -> Unit,
     onPro: () -> Unit,
     onToggleGrid: () -> Unit,
-    onDemo: () -> Unit,
+    onAnalyze: () -> Unit,
     onSettings: () -> Unit
 ) {
     Row(
@@ -485,8 +490,9 @@ private fun TopBar(
     ) {
         AiModeIndicator()
         Spacer(Modifier.weight(1f))
-        // Demo trigger for the AI HUD (Prompt 5). Real analysis wires in Prompt 6/7.
-        IconButton(onClick = onDemo) {
+        // Real Luma Vision analysis: taps grab a live preview frame and run it
+        // through the on-device analyzer (BUG 1).
+        IconButton(onClick = onAnalyze) {
             Icon(Icons.Filled.AutoAwesome, "Analyze scene", tint = LumaAccent)
         }
         IconButton(onClick = onToggleGrid) {
@@ -601,16 +607,17 @@ private fun LockBadge(text: String) {
 }
 
 @Composable
-private fun GalleryThumbnail(file: File?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun GalleryThumbnail(uri: Uri?, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .size(48.dp)
-            .clickable(enabled = file != null, onClick = onClick)
+            .clickable(enabled = uri != null, onClick = onClick)
             .background(Color(0x33FFFFFF), RoundedCornerShape(10.dp))
             .border(1.dp, Color(0x55FFFFFF), RoundedCornerShape(10.dp)),
         contentAlignment = Alignment.Center
     ) {
-        val thumb = remember(file) { file?.let { loadThumbnail(it) } }
+        val context = LocalContext.current
+        val thumb = remember(uri) { uri?.let { loadThumbnail(it, context) } }
         thumb?.let {
             Image(
                 bitmap = it,
@@ -633,16 +640,18 @@ private fun cycleFlash(viewModel: CameraViewModel, current: Int) {
     viewModel.setFlash(seq[(idx + 1) % seq.size])
 }
 
-private fun loadThumbnail(file: File): ImageBitmap? {
-    return if (file.extension.equals("mp4", ignoreCase = true)) {
+private fun loadThumbnail(uri: Uri, context: Context): ImageBitmap? {
+    val resolver = context.contentResolver
+    val isVideo = resolver.getType(uri) == "video/mp4"
+    return if (isVideo) {
         try {
             val retriever = MediaMetadataRetriever()
-            retriever.setDataSource(file.absolutePath)
+            retriever.setDataSource(context, uri)
             retriever.frameAtTime?.asImageBitmap()
         } catch (_: Exception) {
             null
         }
     } else {
-        BitmapFactory.decodeFile(file.absolutePath)?.asImageBitmap()
+        resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it)?.asImageBitmap() }
     }
 }

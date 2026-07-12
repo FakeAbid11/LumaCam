@@ -2,6 +2,7 @@ package com.lumacam.app.ui.camera
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.graphics.Bitmap
 import com.lumacam.feature.ai.AnalysisStage
 import com.lumacam.feature.ai.AnalysisState
 import com.lumacam.feature.ai.CompositionAnalyzer
@@ -15,9 +16,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * Drives the AI guidance HUD. Prompt 5 runs the injected [CompositionAnalyzer]
- * (a mock) on demand via a demo trigger; Prompt 6/7 will feed the same state
- * from the real pipeline with no change to the HUD composables.
+ * Drives the AI guidance HUD. The injected [CompositionAnalyzer] is the real Luma
+ * Vision pipeline; [startAnalysis] feeds it a frame grabbed from the live preview
+ * and streams the staged [AnalysisState] the HUD renders.
  */
 @HiltViewModel
 class AiHudViewModel @Inject constructor(
@@ -29,12 +30,15 @@ class AiHudViewModel @Inject constructor(
 
     private var job: Job? = null
 
-    /** Starts a fresh analysis pass, streaming stages then the final result. */
-    fun startAnalysis() {
+    /**
+     * Starts a fresh analysis pass over [frame] (with [rotationDegrees]), streaming
+     * stages then the final result. Cancels any in-flight pass first.
+     */
+    fun startAnalysis(frame: Bitmap, rotationDegrees: Int = 0) {
         job?.cancel()
         _state.value = AiHudState(active = true, stage = AnalysisStage.DETECTING_SCENE)
         job = viewModelScope.launch {
-            analyzer.analyze().collect { s ->
+            analyzer.analyze(frame, rotationDegrees).collect { s ->
                 _state.value = when (s) {
                     is AnalysisState.Idle -> AiHudState()
                     is AnalysisState.InProgress ->

@@ -1,18 +1,20 @@
 package com.lumacam.feature.ai
 
+import android.graphics.Bitmap
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
 /**
- * Hardcoded stand-in for the real AI pipeline (Prompt 6/7). Walks through the
+ * Hardcoded stand-in for the real AI pipeline. Kept (unbound) for Compose Previews
+ * and fast UI iteration without running real ML Kit inference. Walks through the
  * analysis stages with realistic delays, then emits a fixed [CompositionResult]
  * chosen to demonstrate every HUD overlay — including a perfect 100 score so the
- * shutter glow + haptic fire.
+ * shutter glow + haptic fire. The [frame]/[rotationDegrees] arguments are ignored.
  */
 class MockCompositionAnalyzer : CompositionAnalyzer {
 
-    override fun analyze(): Flow<AnalysisState> = flow {
+    override fun analyze(frame: Bitmap, rotationDegrees: Int): Flow<AnalysisState> = flow {
         emit(AnalysisState.InProgress(AnalysisStage.DETECTING_SCENE))
         delay(STAGE_DELAY_MS)
         emit(AnalysisState.InProgress(AnalysisStage.FINDING_SUBJECT))

@@ -12,7 +12,8 @@ import com.lumacam.app.data.LocalModelStorage
 import com.lumacam.app.data.LumaDatabase
 import com.lumacam.app.data.SettingsRepository
 import com.lumacam.feature.ai.CompositionAnalyzer
-import com.lumacam.feature.ai.MockCompositionAnalyzer
+import com.lumacam.feature.ai.vision.LumaVisionAnalyzer
+import com.lumacam.feature.ai.vision.LumaVisionCompositionAnalyzer
 import com.lumacam.feature.ai.cloud.CloudAiProviderFactory
 import com.lumacam.feature.ai.local.DefaultLocalAiProvider
 import com.lumacam.feature.ai.local.LocalAiProvider
@@ -43,10 +44,15 @@ object AppModule {
     fun provideSettingsRepository(@ApplicationContext context: Context): SettingsRepository =
         SettingsRepository(context)
 
-    // Prompt 5: mock AI source. Prompt 6/7 swaps this binding for the real analyzer.
+    // Real Luma Vision pipeline (PRD §4 Tier 2). The analyzer is created with the
+    // on-device ML Kit + accelerometer stack and kept alive for the app's lifetime;
+    // its sensor listener is started here so tilt-based horizon is always current.
     @Provides
     @Singleton
-    fun provideCompositionAnalyzer(): CompositionAnalyzer = MockCompositionAnalyzer()
+    fun provideCompositionAnalyzer(@ApplicationContext context: Context): CompositionAnalyzer {
+        val vision = LumaVisionAnalyzer.create(context).also { it.start() }
+        return LumaVisionCompositionAnalyzer(vision)
+    }
 
     // Cloud AI (PRD §4 Tier 4). Provided in isolation here; wired into the "✨"
     // analysis selection later (Prompt 10 — Smart AI Engine).

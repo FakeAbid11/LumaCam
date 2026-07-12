@@ -7,6 +7,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.ContentScale
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
@@ -20,20 +21,25 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import android.net.Uri
 import java.io.File
 
 @Composable
-fun MediaViewer(file: File, onDismiss: () -> Unit) {
+fun MediaViewer(uri: Uri, onDismiss: () -> Unit) {
     val context = LocalContext.current
-    val isVideo = file.extension.equals("mp4", ignoreCase = true)
+    val isVideo = context.contentResolver.getType(uri) == "video/mp4"
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             if (isVideo) {
                 AndroidView(
                     factory = {
                         VideoView(it).apply {
-                            setVideoPath(file.absolutePath)
+                            setVideoURI(uri)
                             setMediaController(MediaController(it).apply { setAnchorView(this@apply) })
                             start()
                         }
@@ -41,9 +47,18 @@ fun MediaViewer(file: File, onDismiss: () -> Unit) {
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
-                val bitmap = remember(file) { BitmapFactory.decodeFile(file.absolutePath)?.asImageBitmap() }
+                val bitmap = remember(uri) {
+                    context.contentResolver.openInputStream(uri)?.use {
+                        BitmapFactory.decodeStream(it)?.asImageBitmap()
+                    }
+                }
                 bitmap?.let {
-                    Image(bitmap = it, contentDescription = null, modifier = Modifier.fillMaxSize())
+                    Image(
+                        bitmap = it,
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
             IconButton(onClick = onDismiss, modifier = Modifier.align(Alignment.TopEnd)) {

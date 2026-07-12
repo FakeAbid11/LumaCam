@@ -1,11 +1,17 @@
 package com.lumacam.core.camera
 
+import android.content.ContentValues
 import android.content.Context
+import android.graphics.Bitmap
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.CaptureRequest
+import android.net.Uri
 import android.util.Log
 import android.annotation.SuppressLint
+import androidx.camera.core.ImageProxy
+import androidx.camera.core.ImageProxy.toBitmap
+import java.util.concurrent.atomic.AtomicReference
 import androidx.annotation.OptIn
 import androidx.camera.camera2.interop.Camera2CameraControl
 import androidx.camera.camera2.interop.Camera2CameraInfo
@@ -53,6 +59,14 @@ class LumaCameraController @Inject constructor(
     private var boundLifecycleOwner: LifecycleOwner? = null
     private var recording: Recording? = null
 
+    /**
+     * One-shot callback for an analysis-only frame grab. Set when "✨ Analyze" is
+     * tapped; consumed by the next [ImageAnalysis] frame (which converts it to a
+     * Bitmap and hands it back with its rotation). Cleared after a single use so we
+     * never convert frames on the hot path except when explicitly requested.
+     */
+    private val pendingFrame = AtomicReference<((Bitmap?, Int) -> Unit)?>(null)
+
     private val _lensFacing = MutableStateFlow(LensFacing.BACK)
     val lensFacing: StateFlow<LensFacing> = _lensFacing.asStateFlow()
 
@@ -65,8 +79,8 @@ class LumaCameraController @Inject constructor(
     private val _isRecording = MutableStateFlow(false)
     val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
 
-    private val _lastMedia = MutableStateFlow<File?>(null)
-    val lastMedia: StateFlow<File?> = _lastMedia.asStateFlow()
+    private val _lastMedia = MutableStateFlow<Uri?>(null)
+    val lastMedia: StateFlow<Uri?> = _lastMedia.asStateFlow()
 
     private val _bindingError = MutableStateFlow<String?>(null)
     val bindingError: StateFlow<String?> = _bindingError.asStateFlow()
@@ -137,15 +151,20 @@ class LumaCameraController @Inject constructor(
         val recorder = Recorder.Builder().build()
         val videoCaptureUC = VideoCapture.Builder(recorder).build()
 
-        // No-op analyzer kept bound for the future AI tier (PRD §5). The frame is
-        // always closed (try/finally + camera executor) so a thrown analyzer never
-        // leaks an ImageProxy and stalls the camera pipeline.
+        // Analysis-only frame grab (PRD §4/§5). The analyzer is always bound but is
+        // a no-op unless a one-shot grab was requested via [captureAnalysisFrame];
+        // only then does it convert the current frame to a Bitmap and hand it back.
+        // The frame is always closed (try/finally + camera executor) so a thrown
+        // analyzer never leaks an ImageProxy and stalls the camera pipeline.
         val imageAnalysis = ImageAnalysis.Builder()
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build()
-        imageAnalysis.setAnalyzer(cameraExecutor()) { proxy ->
+        imageAnalysis.setAnalyzer(cameraExecutor()) { proxy: ImageProxy ->
             try {
-                // Reserved for the future on-device analysis pipeline (Prompt 7).
+                pendingFrame.getAndSet(null)?.let { cb ->
+                    val frame = proxy.toBitmap()
+                    cb(frame, proxy.imageInfo.rotationDegrees)
+                }
             } finally {
                 proxy.close()
             }
@@ -328,10 +347,13 @@ class LumaCameraController @Inject constructor(
     }
 
     @SuppressLint("MissingPermission")
-    fun capturePhoto(onResult: (File?) -> Unit) {
+    fun capturePhoto(onResult: (Uri?) -> Unit) {
         val imageCapture = imageCapture ?: return onResult(null)
-        val file = mediaSaver.newPhotoFile()
-        val output = ImageCapture.OutputFileOptions.Builder(file).build()
+        // Write the JPEG into a private temp file first (so FilmPhotoBaker can bake
+        // in place), then publish it into the MediaStore Uri the Gallery indexes.
+        val uri = mediaSaver.createPhotoUri()
+        val tempFile = mediaSaver.newPhotoTempFile()
+        val output = ImageCapture.OutputFileOptions.Builder(tempFile).build()
         imageCapture.takePicture(
             output,
             ContextCompat.getMainExecutor(context),
@@ -339,25 +361,28 @@ class LumaCameraController @Inject constructor(
                 override fun onImageSaved(result: ImageCapture.OutputFileResults) {
                     val preset = _filmPreset.value
                     if (preset.isIdentity) {
-                        _lastMedia.value = file
-                        onResult(file)
+                        mediaSaver.publishPhoto(uri, tempFile)
+                        _lastMedia.value = uri
+                        onResult(uri)
                         return
                     }
                     // Bake the same film look into the full-res JPEG off the main thread.
                     bakeExecutor().execute {
                         try {
-                            photoBaker.bake(file, preset)
+                            photoBaker.bake(tempFile, preset)
                         } catch (e: Exception) {
                             Log.e(TAG, "photo bake failed", e)
                         }
                         ContextCompat.getMainExecutor(context).execute {
-                            _lastMedia.value = file
-                            onResult(file)
+                            mediaSaver.publishPhoto(uri, tempFile)
+                            _lastMedia.value = uri
+                            onResult(uri)
                         }
                     }
                 }
 
                 override fun onError(exception: ImageCaptureException) {
+                    mediaSaver.discard(uri)
                     _bindingError.value = exception.message
                     Log.e(TAG, "capture failed", exception)
                     onResult(null)
@@ -370,17 +395,22 @@ class LumaCameraController @Inject constructor(
     fun startRecording(useAudio: Boolean): Boolean {
         val videoCapture = videoCapture ?: return false
         if (_isRecording.value) return false
-        val file = mediaSaver.newVideoFile()
-        val outputOptions = FileOutputOptions.Builder(file).build()
+        // Video is written directly into its MediaStore Uri (the live GL/CameraEffect
+        // pipeline already bakes any film preset during capture — no post-pass needed,
+        // unlike photos). The row stays pending until finalize().
+        val (uri, values) = mediaSaver.createVideoUri()
+        val outputOptions = FileOutputOptions.Builder(context.contentResolver, uri, values).build()
         val pending = videoCapture.output.prepareRecording(context, outputOptions)
         if (useAudio) pending.withAudioEnabled()
         recording = pending.start(ContextCompat.getMainExecutor(context)) { event ->
             if (event is VideoRecordEvent.Finalize) {
                 if (event.hasError()) {
+                    mediaSaver.discard(uri)
                     _bindingError.value = "Video error: ${event.error}"
                     _lastMedia.value = null
                 } else {
-                    _lastMedia.value = file
+                    mediaSaver.finalize(uri)
+                    _lastMedia.value = uri
                 }
                 _isRecording.value = false
             }
@@ -392,6 +422,17 @@ class LumaCameraController @Inject constructor(
     fun stopRecording() {
         recording?.stop()
         recording = null
+    }
+
+    /**
+     * Requests a single in-memory frame from the live preview for AI analysis — not
+     * a full photo/video capture. The next [ImageAnalysis] frame converts itself to
+     * a [Bitmap] (with its rotation in degrees) and is delivered to [onFrame]. Both
+     * the front and back cameras route through this same analyzer, so the grabbed
+     * frame always reflects the currently-active lens.
+     */
+    fun captureAnalysisFrame(onFrame: (Bitmap?, Int) -> Unit) {
+        pendingFrame.set(onFrame)
     }
 
     fun setZoomRatio(ratio: Float) {

@@ -37,7 +37,7 @@ class CameraViewModel @Inject constructor(
     val flashMode: StateFlow<Int> = cameraController.flashMode
     val zoomState: StateFlow<ZoomState?> = cameraController.zoomState
     val isRecording: StateFlow<Boolean> = cameraController.isRecording
-    val lastMedia: StateFlow<File?> = cameraController.lastMedia
+    val lastMedia: StateFlow<android.net.Uri?> = cameraController.lastMedia
     val bindingError: StateFlow<String?> = cameraController.bindingError
 
     val capabilities: StateFlow<CameraCapabilities?> = cameraController.capabilities
@@ -99,7 +99,11 @@ class CameraViewModel @Inject constructor(
 
     fun shutdown() = cameraController.shutdown()
 
-    fun capturePhoto(onResult: (File?) -> Unit) = cameraController.capturePhoto(onResult)
+    fun capturePhoto(onResult: (android.net.Uri?) -> Unit) = cameraController.capturePhoto(onResult)
+
+    /** Grabs a single in-memory preview frame for AI analysis (see BUG 1). */
+    fun captureAnalysisFrame(onFrame: (android.graphics.Bitmap?, Int) -> Unit) =
+        cameraController.captureAnalysisFrame(onFrame)
 
     fun startRecording(useAudio: Boolean) = cameraController.startRecording(useAudio)
     fun stopRecording() = cameraController.stopRecording()
