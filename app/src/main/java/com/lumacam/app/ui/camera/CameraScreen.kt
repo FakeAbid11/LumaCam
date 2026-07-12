@@ -90,7 +90,6 @@ import com.lumacam.core.camera.FlashMode
 import com.lumacam.core.ui.components.LumaBottomSheet
 import com.lumacam.core.ui.theme.LumaAccent
 import java.io.File
-import kotlin.math.min
 import kotlinx.coroutines.delay
 
 private const val CONTROLS_HIDE_DELAY_MS = 4000L
@@ -337,7 +336,7 @@ private fun CameraContent(
                                 modifier = Modifier.fillMaxWidth(),
                                 contentAlignment = Alignment.Center
                             ) {
-                                val sliderWidth = min(maxWidth, 560.dp)
+                                val sliderWidth = maxWidth.coerceAtMost(560.dp)
                                 Slider(
                                     value = z.zoomRatio,
                                     onValueChange = { viewModel.setZoomRatio(it); interactionTick++ },

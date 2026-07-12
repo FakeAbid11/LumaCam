@@ -22,6 +22,7 @@ import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -67,21 +68,13 @@ class CameraViewModel @Inject constructor(
             cameraController.setPreviewFilterEnabled(enabled)
 
             val effects = settingsRepository.visualEffectsEnabled.first()
-            _lowEndMode.value = effects ?: defaultLowEndForDevice()
+            _lowEndMode.value = effects?.let { !it }
+                ?: computeLowEndForTier(benchmarkStore.load()?.tier)
         }
     }
 
     /** Low-tier devices default live preview filtering off (capture stays full-quality). */
     private fun defaultPreviewFilterForDevice(): Boolean = !computeLowEndForTier(benchmarkStore.load()?.tier)
-
-    /**
-     * Shared tier → "reduced visuals" decision used by both the film preview-filter
-     * default and the general visual-effects default, so the two never produce a
-     * half-reduced, inconsistent look on LIMITED/BRUTAL_TRUTH devices. Internal
-     * (visible for tests) to lock the contract.
-     */
-    internal fun computeLowEndForTier(tier: DeviceTier?): Boolean =
-        tier == DeviceTier.LIMITED || tier == DeviceTier.BRUTAL_TRUTH
 
     fun setVisualEffects(enabled: Boolean) {
         _lowEndMode.value = !enabled
@@ -103,6 +96,8 @@ class CameraViewModel @Inject constructor(
     }
 
     fun unbind() = cameraController.unbind()
+
+    fun shutdown() = cameraController.shutdown()
 
     fun capturePhoto(onResult: (File?) -> Unit) = cameraController.capturePhoto(onResult)
 
@@ -127,5 +122,14 @@ class CameraViewModel @Inject constructor(
 
     companion object {
         val FLASH_SEQUENCE = listOf(FlashMode.OFF, FlashMode.ON, FlashMode.AUTO)
+
+        /**
+         * Shared tier → "reduced visuals" decision used by both the film
+         * preview-filter default and the general visual-effects default, so the two
+         * never produce a half-reduced, inconsistent look on LIMITED/BRUTAL_TRUTH
+         * devices. Visible for tests to lock the contract.
+         */
+        internal fun computeLowEndForTier(tier: DeviceTier?): Boolean =
+            tier == DeviceTier.LIMITED || tier == DeviceTier.BRUTAL_TRUTH
     }
 }
