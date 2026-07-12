@@ -296,10 +296,10 @@ fun AimPointOverlay(
         )
         drawCircle(color = LumaAccent, radius = 3.dp.toPx())
         val tick = 6.dp.toPx()
-        drawLine(LumaAccent, Offset(cx - base * 1.4f, cy), Offset(cx - base * 1.4f + tick, cy), Stroke(width = 2.dp.toPx()))
-        drawLine(LumaAccent, Offset(cx + base * 1.4f, cy), Offset(cx + base * 1.4f - tick, cy), Stroke(width = 2.dp.toPx()))
-        drawLine(LumaAccent, Offset(cx, cy - base * 1.4f), Offset(cx, cy - base * 1.4f + tick), Stroke(width = 2.dp.toPx()))
-        drawLine(LumaAccent, Offset(cx, cy + base * 1.4f), Offset(cx, cy + base * 1.4f - tick), Stroke(width = 2.dp.toPx()))
+        drawLine(LumaAccent, Offset(cx - base * 1.4f, cy), Offset(cx - base * 1.4f + tick, cy), strokeWidth = 2.dp.toPx())
+        drawLine(LumaAccent, Offset(cx + base * 1.4f, cy), Offset(cx + base * 1.4f - tick, cy), strokeWidth = 2.dp.toPx())
+        drawLine(LumaAccent, Offset(cx, cy - base * 1.4f), Offset(cx, cy - base * 1.4f + tick), strokeWidth = 2.dp.toPx())
+        drawLine(LumaAccent, Offset(cx, cy + base * 1.4f), Offset(cx, cy + base * 1.4f - tick), strokeWidth = 2.dp.toPx())
     }
 }
 
