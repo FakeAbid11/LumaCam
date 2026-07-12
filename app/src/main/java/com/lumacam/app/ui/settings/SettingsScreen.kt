@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -35,7 +36,11 @@ import com.lumacam.core.ui.theme.LumaWhite
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onOpenCloudAi: () -> Unit = {}) {
+fun SettingsScreen(
+    onBack: () -> Unit,
+    onOpenCloudAi: () -> Unit = {},
+    onOpenLocalAi: () -> Unit = {}
+) {
     Scaffold(
         containerColor = LumaBlack,
         topBar = {
@@ -66,6 +71,13 @@ fun SettingsScreen(onBack: () -> Unit, onOpenCloudAi: () -> Unit = {}) {
                         subtitle = "Providers, API key & connection test",
                         accent = true,
                         onClick = onOpenCloudAi
+                    )
+                    SettingsRow(
+                        icon = Icons.Filled.Memory,
+                        title = "Local AI Model",
+                        subtitle = "Download & run on-device vision models",
+                        accent = true,
+                        onClick = onOpenLocalAi
                     )
                 }
             }

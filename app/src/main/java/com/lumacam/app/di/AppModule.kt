@@ -4,11 +4,17 @@ import android.content.Context
 import androidx.room.Room
 import com.lumacam.app.data.CaptureDao
 import com.lumacam.app.data.CloudAiKeyStore
+import com.lumacam.app.data.LocalModelDownloader
+import com.lumacam.app.data.LocalModelRepository
+import com.lumacam.app.data.LocalModelStorage
 import com.lumacam.app.data.LumaDatabase
 import com.lumacam.app.data.SettingsRepository
 import com.lumacam.feature.ai.CompositionAnalyzer
 import com.lumacam.feature.ai.MockCompositionAnalyzer
 import com.lumacam.feature.ai.cloud.CloudAiProviderFactory
+import com.lumacam.feature.ai.local.DefaultLocalAiProvider
+import com.lumacam.feature.ai.local.LocalAiProvider
+import com.lumacam.feature.ai.local.PlaceholderLocalInferenceEngine
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -50,4 +56,34 @@ object AppModule {
     @Provides
     @Singleton
     fun provideCloudAiProviderFactory(): CloudAiProviderFactory = CloudAiProviderFactory()
+
+    // Local AI Model (PRD §4 Tier 3). On-device model download/selection/storage.
+    // Provided in isolation here; wired into the "✨" analysis selection later
+    // (Prompt 10 — Smart AI Engine).
+    @Provides
+    @Singleton
+    fun provideLocalModelStorage(@ApplicationContext context: Context): LocalModelStorage =
+        LocalModelStorage(context)
+
+    @Provides
+    @Singleton
+    fun provideLocalModelRepository(
+        @ApplicationContext context: Context,
+        storage: LocalModelStorage
+    ): LocalModelRepository = LocalModelRepository(context, storage)
+
+    @Provides
+    @Singleton
+    fun provideLocalModelDownloader(storage: LocalModelStorage): LocalModelDownloader =
+        LocalModelDownloader(storage)
+
+    // Uses the placeholder inference engine until a real native GGUF runtime is
+    // bundled (a deliberately isolated step — see LocalInferenceEngine docs).
+    @Provides
+    @Singleton
+    fun provideLocalAiProvider(repository: LocalModelRepository): LocalAiProvider =
+        DefaultLocalAiProvider(
+            engine = PlaceholderLocalInferenceEngine(),
+            activeModel = { repository.activeModel() }
+        )
 }
