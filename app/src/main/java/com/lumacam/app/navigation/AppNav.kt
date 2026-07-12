@@ -7,11 +7,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.lumacam.app.ui.camera.CameraScreen
+import com.lumacam.app.ui.settings.CloudAiSettingsScreen
 import com.lumacam.app.ui.settings.SettingsScreen
 
 object Routes {
     const val CAMERA = "camera"
     const val SETTINGS = "settings"
+    const val CLOUD_AI_SETTINGS = "cloud_ai_settings"
 }
 
 @Composable
@@ -28,7 +30,13 @@ fun AppNav(
             CameraScreen(navController = navController)
         }
         composable(Routes.SETTINGS) {
-            SettingsScreen(onBack = { navController.popBackStack() })
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onOpenCloudAi = { navController.navigate(Routes.CLOUD_AI_SETTINGS) }
+            )
+        }
+        composable(Routes.CLOUD_AI_SETTINGS) {
+            CloudAiSettingsScreen(onBack = { navController.popBackStack() })
         }
     }
 }

@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -32,5 +33,11 @@ dependencies {
     implementation(libs.mlkit.`object`.detection)
     implementation(libs.mlkit.image.labeling)
 
+    // Cloud AI (PRD §4 Tier 4) — REST clients + JSON parsing for vision providers.
+    implementation(libs.okhttp)
+    implementation(libs.okio)
+    implementation(libs.kotlinx.serialization.json)
+
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

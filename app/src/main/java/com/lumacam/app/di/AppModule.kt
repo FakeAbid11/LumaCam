@@ -3,10 +3,12 @@ package com.lumacam.app.di
 import android.content.Context
 import androidx.room.Room
 import com.lumacam.app.data.CaptureDao
+import com.lumacam.app.data.CloudAiKeyStore
 import com.lumacam.app.data.LumaDatabase
 import com.lumacam.app.data.SettingsRepository
 import com.lumacam.feature.ai.CompositionAnalyzer
 import com.lumacam.feature.ai.MockCompositionAnalyzer
+import com.lumacam.feature.ai.cloud.CloudAiProviderFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -37,4 +39,15 @@ object AppModule {
     @Provides
     @Singleton
     fun provideCompositionAnalyzer(): CompositionAnalyzer = MockCompositionAnalyzer()
+
+    // Cloud AI (PRD §4 Tier 4). Provided in isolation here; wired into the "✨"
+    // analysis selection later (Prompt 10 — Smart AI Engine).
+    @Provides
+    @Singleton
+    fun provideCloudAiKeyStore(@ApplicationContext context: Context): CloudAiKeyStore =
+        CloudAiKeyStore(context)
+
+    @Provides
+    @Singleton
+    fun provideCloudAiProviderFactory(): CloudAiProviderFactory = CloudAiProviderFactory()
 }

@@ -1,5 +1,6 @@
 package com.lumacam.app.ui.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,7 +35,7 @@ import com.lumacam.core.ui.theme.LumaWhite
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onOpenCloudAi: () -> Unit = {}) {
     Scaffold(
         containerColor = LumaBlack,
         topBar = {
@@ -61,9 +62,10 @@ fun SettingsScreen(onBack: () -> Unit) {
                 SettingsSection("AI") {
                     SettingsRow(
                         icon = Icons.Filled.AutoAwesome,
-                        title = "AI settings",
-                        subtitle = "Smart tiers, Luma Vision, Cloud (Gemini)",
-                        accent = true
+                        title = "Cloud AI",
+                        subtitle = "Providers, API key & connection test",
+                        accent = true,
+                        onClick = onOpenCloudAi
                     )
                 }
             }
@@ -107,11 +109,13 @@ private fun SettingsRow(
     icon: ImageVector,
     title: String,
     subtitle: String,
-    accent: Boolean = false
+    accent: Boolean = false,
+    onClick: (() -> Unit)? = null
 ) {
     androidx.compose.foundation.layout.Row(
         modifier = Modifier
             .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
     ) {

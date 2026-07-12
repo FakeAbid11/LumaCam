@@ -44,6 +44,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     packaging {
@@ -85,6 +86,9 @@ dependencies {
 
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.coroutines)
+
+    // Cloud AI key storage — encrypted at rest, never plaintext.
+    implementation(libs.androidx.security.crypto)
 
     debugImplementation(libs.androidx.ui.tooling)
 
