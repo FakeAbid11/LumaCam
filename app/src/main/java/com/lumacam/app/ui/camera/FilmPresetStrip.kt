@@ -65,7 +65,7 @@ private fun PresetChip(preset: FilmPreset, selected: Boolean, onClick: () -> Uni
         ColorFilter.colorMatrix(ColorMatrix(preset.colorMatrix.copyOf()))
     }
         Column(
-            horizontalAlignment = Alignment.CenterVertically,
+            horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .heightIn(min = 48.dp)
                 .clickable(

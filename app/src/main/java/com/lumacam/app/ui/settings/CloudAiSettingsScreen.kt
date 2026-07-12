@@ -1,7 +1,6 @@
 package com.lumacam.app.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -79,20 +78,15 @@ fun CloudAiSettingsScreen(
             )
         }
     ) { inner ->
-        BoxWithConstraints(
-            modifier = Modifier.fillMaxSize().padding(inner)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(inner)
+                .widthIn(max = 600.dp)
+                .padding(horizontal = 20.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            val bodyModifier = if (maxWidth > 600.dp) {
-                Modifier.widthIn(max = 600.dp).fillMaxWidth()
-            } else {
-                Modifier.fillMaxWidth()
-            }
-            Column(
-                modifier = bodyModifier
-                    .padding(horizontal = 20.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
             Spacer(Modifier.height(4.dp))
             Text(
                 "Cloud AI is optional. Your API key is stored encrypted on this device " +
@@ -182,7 +176,6 @@ private fun ProviderDropdown(
                         expanded = false
                     }
                 )
-            }
             }
         }
     }

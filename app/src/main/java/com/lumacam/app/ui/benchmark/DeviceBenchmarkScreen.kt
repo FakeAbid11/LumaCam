@@ -1,7 +1,6 @@
 package com.lumacam.app.ui.benchmark
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -70,20 +69,15 @@ fun DeviceBenchmarkScreen(
             )
         }
     ) { inner ->
-        BoxWithConstraints(
-            modifier = Modifier.fillMaxSize().padding(inner)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(inner)
+                .widthIn(max = 600.dp)
+                .padding(horizontal = 20.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            val bodyModifier = if (maxWidth > 600.dp) {
-                Modifier.widthIn(max = 600.dp).fillMaxWidth()
-            } else {
-                Modifier.fillMaxWidth()
-            }
-            Column(
-                modifier = bodyModifier
-                    .padding(horizontal = 20.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
             Spacer(Modifier.height(4.dp))
             Text(
                 "Check how well this phone can run AI models on-device. We read your " +
@@ -165,7 +159,6 @@ private fun SpecCard(caps: DeviceCapabilities) {
             SpecRow("Vulkan GPU", if (caps.supportsVulkan) "Yes" else "No")
             SpecRow("Free storage", formatBytes(caps.availableStorageBytes))
             SpecRow("Android API", caps.apiLevel.toString())
-            }
         }
     }
 }
