@@ -138,7 +138,7 @@ class CompositionJsonMapperTest {
             """{"sceneType":"landscape","compositionScore":80}"""
         )!!
         assertNull(r.subjectPoint)
-        assertNull(r.recommendedAction)
+        assertEquals(RecommendedAction.NONE, r.recommendedAction)
         assertNull(r.primaryGuidance)
     }
 

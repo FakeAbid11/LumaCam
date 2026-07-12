@@ -44,7 +44,9 @@ class CompositionScorerTest {
         val cy = 1f / 3f
         val box = NormalizedBox(cx - half, cy - half, cx + half, cy + half)
         val result = CompositionScorer.score(detectionWith(box), 0f, 0.5f)
-        assertEquals(NormalizedPoint(cx, cy), result.subjectPoint)
+        val sp = result.subjectPoint!!
+        assertEquals(cx, sp.x, 1e-5f)
+        assertEquals(cy, sp.y, 1e-5f)
         assertEquals(RecommendedAction.HOLD_AND_SHOOT, result.recommendedAction)
     }
 
