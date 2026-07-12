@@ -49,8 +49,8 @@ class LumaVisionCompositionAnalyzerTest {
         }
         val fakeTilt = object : TiltProvider {
             override fun currentTiltDegrees(): Float = 0f
-            override fun start() = Unit
-            override fun stop() = Unit
+            fun start() = Unit
+            fun stop() = Unit
         }
         val analyzer = LumaVisionCompositionAnalyzer(LumaVisionAnalyzer(fakeDetector, fakeTilt))
 
@@ -82,8 +82,8 @@ class LumaVisionCompositionAnalyzerTest {
         }
         val fakeTilt = object : TiltProvider {
             override fun currentTiltDegrees(): Float = 8f
-            override fun start() = Unit
-            override fun stop() = Unit
+            fun start() = Unit
+            fun stop() = Unit
         }
         val analyzer = LumaVisionCompositionAnalyzer(LumaVisionAnalyzer(fakeDetector, fakeTilt))
 
