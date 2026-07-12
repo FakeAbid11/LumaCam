@@ -10,7 +10,7 @@ import android.net.Uri
 import android.util.Log
 import android.annotation.SuppressLint
 import androidx.camera.core.ImageProxy
-import androidx.camera.core.ImageProxy.toBitmap
+import androidx.camera.core.toBitmap
 import java.util.concurrent.atomic.AtomicReference
 import androidx.annotation.OptIn
 import androidx.camera.camera2.interop.Camera2CameraControl
@@ -399,7 +399,9 @@ class LumaCameraController @Inject constructor(
         // pipeline already bakes any film preset during capture — no post-pass needed,
         // unlike photos). The row stays pending until finalize().
         val (uri, values) = mediaSaver.createVideoUri()
-        val outputOptions = FileOutputOptions.Builder(context.contentResolver, uri, values).build()
+        val outputOptions = MediaStoreOutputOptions.Builder(context.contentResolver, uri)
+            .setContentValues(values)
+            .build()
         val pending = videoCapture.output.prepareRecording(context, outputOptions)
         if (useAudio) pending.withAudioEnabled()
         recording = pending.start(ContextCompat.getMainExecutor(context)) { event ->

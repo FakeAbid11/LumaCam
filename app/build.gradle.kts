@@ -7,6 +7,14 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.spotless)
+}
+
+spotless {
+    kotlin {
+        target("src/**/*.kt")
+        ktlint("1.3.1")
+    }
 }
 
 // Signing material is NEVER committed. It is supplied either by a local, git-ignored
@@ -86,11 +94,11 @@ android {
         }
     }
 
-    // Lint is run in CI (lintDebug). Keep it informative rather than a hard gate so
-    // a newly-introduced baseline check can't silently break the pipeline; test
-    // sources are excluded to avoid noise from sample code.
+    // Lint is run in CI (lintDebug) and is now a real gate: any lint *error*
+    // fails the pipeline (warnings do not). test sources are excluded to avoid
+    // noise from sample code.
     lint {
-        abortOnError = false
+        abortOnError = true
         checkReleaseBuilds = false
         ignoreTestSources = true
     }

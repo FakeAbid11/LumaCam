@@ -1,6 +1,15 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.spotless)
+}
+
+spotless {
+    kotlin {
+        target("src/**/*.kt")
+        ktlint("1.3.1")
+    }
 }
 
 android {
@@ -28,6 +37,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.annotation.experimental)
     implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
     implementation(libs.androidx.camera.core)
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)

@@ -26,6 +26,12 @@ jobs:
         uses: gradle/gradle-build-action@v3
       - name: Run lint
         run: ./gradlew lintDebug
+      - name: Check Kotlin formatting (Spotless / ktlint)
+        # Not yet a hard gate: formatting can only be auto-fixed via a local
+        # Gradle run (no local build env per PRD §1), so this reports issues
+        # without failing the pipeline until the codebase is formatted.
+        continue-on-error: true
+        run: ./gradlew spotlessCheck
 
   unit-test:
     name: Unit tests (JVM, no device)

@@ -1,6 +1,14 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.spotless)
+}
+
+spotless {
+    kotlin {
+        target("src/**/*.kt")
+        ktlint("1.3.1")
+    }
 }
 
 android {
