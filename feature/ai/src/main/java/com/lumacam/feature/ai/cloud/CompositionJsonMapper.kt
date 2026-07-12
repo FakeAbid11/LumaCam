@@ -28,27 +28,27 @@ object CompositionJsonMapper {
 
     @Serializable
     private data class Dto(
-        val sceneType: String? = null,
-        val compositionScore: Double? = null,
-        val suggestedDirection: String? = null,
-        val tiltAngle: Double? = null,
-        val lighting: LightingDto? = null,
-        val suggestions: List<String>? = null,
-        val targetCrop: CropDto? = null
+        @SerialName("sceneType") val sceneType: String? = null,
+        @SerialName("compositionScore") val compositionScore: Double? = null,
+        @SerialName("suggestedDirection") val suggestedDirection: String? = null,
+        @SerialName("tiltAngle") val tiltAngle: Double? = null,
+        @SerialName("lighting") val lighting: LightingDto? = null,
+        @SerialName("suggestions") val suggestions: List<String>? = null,
+        @SerialName("targetCrop") val targetCrop: CropDto? = null
     )
 
     @Serializable
     private data class LightingDto(
-        val label: String? = null,
-        val description: String? = null
+        @SerialName("label") val label: String? = null,
+        @SerialName("description") val description: String? = null
     )
 
     @Serializable
     private data class CropDto(
-        val left: Float? = null,
-        val top: Float? = null,
-        val right: Float? = null,
-        val bottom: Float? = null
+        @SerialName("left") val left: Float? = null,
+        @SerialName("top") val top: Float? = null,
+        @SerialName("right") val right: Float? = null,
+        @SerialName("bottom") val bottom: Float? = null
     )
 
     /** Parses [rawContent]; returns null if no usable JSON could be recovered. */

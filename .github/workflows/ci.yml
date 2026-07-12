@@ -51,9 +51,12 @@ jobs:
           retention-days: 7
 
   build:
-    name: Build debug APK
+    name: Build debug + release
     runs-on: ubuntu-latest
     needs: unit-test
+    env:
+      # True only when release signing secrets are configured on the repo.
+      HAS_SIGNING: ${{ secrets.KEYSTORE_BASE64 != '' }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK 17
@@ -70,4 +73,30 @@ jobs:
         with:
           name: lumaCam-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+          retention-days: 14
+      # Decode the keystore only when secrets exist. When absent, the file is never
+      # created and the release build below stays unsigned (compile-check only).
+      - name: Decode signing keystore
+        if: env.HAS_SIGNING == 'true'
+        run: echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      # Always runs: proves the minified release path (R8 + keep rules + resource
+      # shrink) compiles cleanly. Produces a SIGNED artifact only when the keystore
+      # was decoded above; otherwise an unsigned minified APK/AAB.
+      - name: Assemble release (minify compile-check; signs only with secrets)
+        run: ./gradlew assembleRelease bundleRelease
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/release.jks
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      - name: Upload signed release artifacts
+        if: env.HAS_SIGNING == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lumaCam-release
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
           retention-days: 14

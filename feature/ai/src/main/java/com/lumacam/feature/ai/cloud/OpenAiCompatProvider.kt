@@ -1,5 +1,6 @@
 package com.lumacam.feature.ai.cloud
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.add
@@ -23,13 +24,13 @@ class OpenAiCompatProvider(
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     @Serializable
-    private data class Envelope(val choices: List<Choice> = emptyList())
+    private data class Envelope(@SerialName("choices") val choices: List<Choice> = emptyList())
 
     @Serializable
-    private data class Choice(val message: Message? = null)
+    private data class Choice(@SerialName("message") val message: Message? = null)
 
     @Serializable
-    private data class Message(val content: String? = null)
+    private data class Message(@SerialName("content") val content: String? = null)
 
     override fun requestUrl(): String = "${config.effectiveBaseUrl}/v1/chat/completions"
 

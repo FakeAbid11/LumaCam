@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -315,7 +316,7 @@ private fun CameraContent(
                 }
             }
             error?.let {
-                Text(it, color = Color(0xFFFF6B6B), fontSize = 13.sp)
+                Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
             }
         }
 

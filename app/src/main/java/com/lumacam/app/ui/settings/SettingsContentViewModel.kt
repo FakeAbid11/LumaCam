@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lumacam.app.data.DeviceBenchmarkStore
 import com.lumacam.app.data.SettingsRepository
-import com.lumacam.feature.ai.benchmark.DeviceTier
+import com.lumacam.app.ui.camera.CameraViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -26,8 +26,10 @@ class SettingsContentViewModel @Inject constructor(
     val visualEffectsEnabled: Flow<Boolean?> = settingsRepository.visualEffectsEnabled
 
     fun defaultEnabled(): Boolean {
-        val tier = benchmarkStore.load()?.tier ?: return true
-        return tier != DeviceTier.LIMITED && tier != DeviceTier.BRUTAL_TRUTH
+        // Single source of truth shared with the camera's low-end decision so the
+        // two never drift on LIMITED / BRUTAL_TRUTH devices.
+        val tier = benchmarkStore.load()?.tier
+        return !CameraViewModel.computeLowEndForTier(tier)
     }
 
     fun setVisualEffects(enabled: Boolean) {

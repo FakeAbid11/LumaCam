@@ -1,5 +1,6 @@
 package com.lumacam.feature.ai.cloud
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.addJsonObject
@@ -21,16 +22,16 @@ class GeminiProvider(
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     @Serializable
-    private data class Envelope(val candidates: List<Candidate> = emptyList())
+    private data class Envelope(@SerialName("candidates") val candidates: List<Candidate> = emptyList())
 
     @Serializable
-    private data class Candidate(val content: Content? = null)
+    private data class Candidate(@SerialName("content") val content: Content? = null)
 
     @Serializable
-    private data class Content(val parts: List<Part> = emptyList())
+    private data class Content(@SerialName("parts") val parts: List<Part> = emptyList())
 
     @Serializable
-    private data class Part(val text: String? = null)
+    private data class Part(@SerialName("text") val text: String? = null)
 
     override fun requestUrl(): String =
         "${config.effectiveBaseUrl}/v1beta/models/${config.effectiveModel}:generateContent"
