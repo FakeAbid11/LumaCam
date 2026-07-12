@@ -158,4 +158,3 @@ class CompositionJsonMapperTest {
         assertEquals(RecommendedAction.NONE, r.recommendedAction)
     }
 }
-}
