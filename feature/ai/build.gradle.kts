@@ -29,7 +29,7 @@ dependencies {
 
     // Luma Vision (PRD §4 Tier 2) — bundled, offline ML Kit detectors.
     implementation(libs.mlkit.face.detection)
-    implementation(libs.mlkit.object.detection)
+    implementation(libs.mlkit.`object`.detection)
     implementation(libs.mlkit.image.labeling)
 
     testImplementation(libs.junit)
