@@ -134,23 +134,34 @@ fun GhostCropOverlay(bounds: CropBounds, modifier: Modifier = Modifier) {
 
 /**
  * Pulsing accent arrow nudging the user toward [direction]. Hidden on
- * [MoveDirection.NONE].
+ * [MoveDirection.NONE]. When [reducedMotion] is true (low-end devices) the
+ * continuous pulse is dropped and a static arrow is shown instead.
  */
 @Composable
-fun DirectionalArrowOverlay(direction: MoveDirection, modifier: Modifier = Modifier) {
+fun DirectionalArrowOverlay(
+    direction: MoveDirection,
+    modifier: Modifier = Modifier,
+    reducedMotion: Boolean = false
+) {
     AnimatedVisibility(
         visible = direction != MoveDirection.NONE,
         enter = fadeIn(),
         exit = fadeOut(),
         modifier = modifier
     ) {
-        val transition = rememberInfiniteTransition(label = "arrow")
-        val shift by transition.animateFloat(
-            initialValue = 0f,
-            targetValue = 12f,
-            animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-            label = "arrowShift"
-        )
+        // The infinite transition is the only continuous (battery-drawing) part;
+        // skip it on low-end devices so the arrow is shown statically.
+        val shift: Float = if (reducedMotion) {
+            0f
+        } else {
+            val transition = rememberInfiniteTransition(label = "arrow")
+            transition.animateFloat(
+                initialValue = 0f,
+                targetValue = 12f,
+                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+                label = "arrowShift"
+            ).value
+        }
         val icon: ImageVector = when (direction) {
             MoveDirection.UP -> Icons.Filled.ArrowUpward
             MoveDirection.DOWN -> Icons.Filled.ArrowDownward

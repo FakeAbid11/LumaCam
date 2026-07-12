@@ -16,11 +16,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -74,6 +76,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavHostController
 import com.lumacam.app.navigation.Routes
 import com.lumacam.app.ui.camera.hud.AiAssistantSheetContent
@@ -86,6 +90,7 @@ import com.lumacam.core.camera.FlashMode
 import com.lumacam.core.ui.components.LumaBottomSheet
 import com.lumacam.core.ui.theme.LumaAccent
 import java.io.File
+import kotlin.math.min
 import kotlinx.coroutines.delay
 
 private const val CONTROLS_HIDE_DELAY_MS = 4000L
@@ -121,6 +126,7 @@ private fun CameraContent(
     val lenses by viewModel.availableLenses.collectAsState()
     val filmPreset by viewModel.filmPreset.collectAsState()
     val previewFilterEnabled by viewModel.previewFilterEnabled.collectAsState()
+    val lowEndMode by viewModel.lowEndMode.collectAsState()
     val hudState by hudViewModel.state.collectAsState()
 
     var focusPoint by remember { mutableStateOf<Offset?>(null) }
@@ -130,6 +136,7 @@ private fun CameraContent(
     var showAiSheet by remember { mutableStateOf(false) }
     var captureMode by remember { mutableStateOf(CaptureMode.PHOTO) }
     var captureKey by remember { mutableIntStateOf(0) }
+    // MutableState so changing it only recomposes the chrome, not the whole tree.
     var controlsVisible by remember { mutableStateOf(true) }
     var interactionTick by remember { mutableIntStateOf(0) }
     val previewViewState = remember { mutableStateOf<PreviewView?>(null) }
@@ -144,6 +151,8 @@ private fun CameraContent(
         }
     }
 
+    // Each interaction restarts the auto-hide timer. Using a MutableState for
+    // controlsVisible means only the chrome recomposes, not the preview/HUD.
     LaunchedEffect(interactionTick) {
         controlsVisible = true
         delay(CONTROLS_HIDE_DELAY_MS)
@@ -212,6 +221,22 @@ private fun CameraContent(
         }
     }
 
+    // Release camera + film GL resources fully when backgrounded (ON_STOP) so no
+    // GL thread / EGL context / executor keeps running in the background (battery).
+    // Re-bind on resume when the preview is available. (Fold/unfold config changes
+    // also recreate the activity, so camera state is restored from Settings.)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> viewModel.shutdown()
+                Lifecycle.Event.ON_RESUME -> previewView?.let { viewModel.bind(it, lifecycleOwner) }
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         AndroidView(
             factory = { ctx ->
@@ -220,13 +245,7 @@ private fun CameraContent(
             modifier = Modifier.fillMaxSize()
         )
 
-        if (captureFlash.value > 0f) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(Color.White.copy(alpha = captureFlash.value))
-            )
-        }
+        CaptureFlashOverlay(captureFlash, lowEndMode)
 
         focusPoint?.let { pt ->
             Box(
@@ -241,11 +260,14 @@ private fun CameraContent(
         if (gridEnabled) {
             CompositionGridOverlay()
         }
-        hudState.result?.let { result ->
-            HorizonOverlay(tiltAngle = result.tiltAngle, isLevel = result.isLevel)
-            result.targetCrop?.let { GhostCropOverlay(bounds = it) }
-            DirectionalArrowOverlay(direction = result.suggestedDirection)
-        }
+            hudState.result?.let { result ->
+                HorizonOverlay(tiltAngle = result.tiltAngle, isLevel = result.isLevel)
+                result.targetCrop?.let { GhostCropOverlay(bounds = it) }
+                DirectionalArrowOverlay(
+                    direction = result.suggestedDirection,
+                    reducedMotion = lowEndMode
+                )
+            }
         hudState.stage?.let { stage ->
             AnimatedVisibility(
                 visible = hudState.isAnalyzing,
@@ -311,17 +333,23 @@ private fun CameraContent(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     zoom?.let { z ->
                         if (z.maxZoomRatio > z.minZoomRatio) {
-                            Slider(
-                                value = z.zoomRatio,
-                                onValueChange = { viewModel.setZoomRatio(it); interactionTick++ },
-                                valueRange = z.minZoomRatio..z.maxZoomRatio,
-                                colors = SliderDefaults.colors(
-                                    thumbColor = Color.White,
-                                    activeTrackColor = Color.White,
-                                    inactiveTrackColor = Color(0x66FFFFFF)
-                                ),
-                                modifier = Modifier.width(280.dp)
-                            )
+                            BoxWithConstraints(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                val sliderWidth = min(maxWidth, 560.dp)
+                                Slider(
+                                    value = z.zoomRatio,
+                                    onValueChange = { viewModel.setZoomRatio(it); interactionTick++ },
+                                    valueRange = z.minZoomRatio..z.maxZoomRatio,
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = Color.White,
+                                        activeTrackColor = Color.White,
+                                        inactiveTrackColor = Color(0x66FFFFFF)
+                                    ),
+                                    modifier = Modifier.width(sliderWidth)
+                                )
+                            }
                         }
                     }
                     Spacer(Modifier.size(8.dp))
@@ -360,6 +388,7 @@ private fun CameraContent(
                     captureKey = captureKey,
                     scoreProgress = hudState.result?.let { it.compositionScore / 100f },
                     glow = (hudState.result?.compositionScore ?: 0) >= 100,
+                    lowEndMode = lowEndMode,
                     onClick = {
                         interactionTick++
                         when (captureMode) {
@@ -414,6 +443,23 @@ private fun CameraContent(
 
     fullScreenMedia?.let { file ->
         MediaViewer(file = file, onDismiss = { fullScreenMedia = null })
+    }
+}
+
+/**
+ * Full-screen white capture flash. Reads [captureFlash] locally so the 320 ms flash
+ * animation only recomposes this leaf, not the entire camera tree. Suppressed
+ * entirely in [lowEndMode] (LIMITED/BRUTAL_TRUTH tiers) to keep the UI calm.
+ */
+@Composable
+private fun CaptureFlashOverlay(
+    captureFlash: Animatable<Float, *>,
+    lowEndMode: Boolean
+) {
+    if (lowEndMode) return
+    val alpha = captureFlash.value
+    if (alpha > 0f) {
+        Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = alpha)))
     }
 }
 
@@ -476,6 +522,7 @@ private fun TopBar(
 private fun AiModeIndicator() {
     Row(
         modifier = Modifier
+            .heightIn(min = 48.dp)
             .padding(start = 8.dp)
             .background(Color(0x33000000), RoundedCornerShape(50))
             .clickable { /* AI mode selector — Prompt 10 */ }
@@ -504,6 +551,7 @@ private fun AiModeIndicator() {
 private fun PreviewFilterToggle(enabled: Boolean, onToggle: (Boolean) -> Unit) {
     Row(
         modifier = Modifier
+            .heightIn(min = 48.dp)
             .background(Color(0x66000000), RoundedCornerShape(50))
             .clickable { onToggle(!enabled) }
             .padding(horizontal = 12.dp, vertical = 5.dp),

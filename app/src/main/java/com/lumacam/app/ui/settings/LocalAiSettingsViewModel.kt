@@ -118,6 +118,10 @@ class LocalAiSettingsViewModel @Inject constructor(
                     if (repository.activeModelId == null) repository.select(spec)
                     refresh()
                 }
+                // Evict finished jobs so the map doesn't accumulate stale references.
+                if (state is DownloadState.Completed || state is DownloadState.Failed) {
+                    downloadJobs.remove(spec.id)
+                }
             }
         }
     }

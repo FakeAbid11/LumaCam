@@ -19,6 +19,7 @@ class SettingsRepository(private val context: Context) {
         val CLOUD_AI = booleanPreferencesKey("cloud_ai")
         val FILM_PRESET = stringPreferencesKey("film_preset")
         val FILM_PREVIEW_FILTER = booleanPreferencesKey("film_preview_filter")
+        val VISUAL_EFFECTS = booleanPreferencesKey("visual_effects")
     }
 
     val privacyMode: Flow<Boolean> =
@@ -35,6 +36,14 @@ class SettingsRepository(private val context: Context) {
     val filmPreviewFilter: Flow<Boolean?> =
         context.dataStore.data.map { it[Keys.FILM_PREVIEW_FILTER] }
 
+    /**
+     * User preference for non-essential visual flourishes (capture flash, shutter
+     * glow/pulse, continuous arrow pulse). `null` when unset — the [CameraViewModel]
+     * then applies the device-tier default (off on LIMITED/BRUTAL_TRUTH tiers).
+     */
+    val visualEffectsEnabled: Flow<Boolean?> =
+        context.dataStore.data.map { it[Keys.VISUAL_EFFECTS] }
+
     suspend fun setPrivacyMode(enabled: Boolean) {
         context.dataStore.edit { it[Keys.PRIVACY_MODE] = enabled }
     }
@@ -49,5 +58,9 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setFilmPreviewFilter(enabled: Boolean) {
         context.dataStore.edit { it[Keys.FILM_PREVIEW_FILTER] = enabled }
+    }
+
+    suspend fun setVisualEffects(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.VISUAL_EFFECTS] = enabled }
     }
 }

@@ -1,6 +1,7 @@
 package com.lumacam.app.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -74,14 +76,20 @@ fun LocalAiSettingsScreen(
             )
         }
     ) { inner ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(inner)
-                .padding(horizontal = 20.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxSize().padding(inner)
         ) {
+            val bodyModifier = if (maxWidth > 600.dp) {
+                Modifier.widthIn(max = 600.dp).fillMaxWidth()
+            } else {
+                Modifier.fillMaxWidth()
+            }
+            Column(
+                modifier = bodyModifier
+                    .padding(horizontal = 20.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             Spacer(Modifier.height(4.dp))
             Text(
                 "Run analysis fully on-device — no internet, nothing leaves your phone. " +
@@ -293,6 +301,7 @@ private fun LocalDebugSection(state: LocalDebugState, onRun: () -> Unit) {
                     color = LumaWhite,
                     textAlign = TextAlign.Start
                 )
+            }
         }
     }
 }

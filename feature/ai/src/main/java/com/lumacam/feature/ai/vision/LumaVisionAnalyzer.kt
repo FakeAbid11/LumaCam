@@ -25,11 +25,16 @@ class LumaVisionAnalyzer(
      * detection. Never throws — detection failures degrade gracefully.
      */
     suspend fun analyze(frame: Bitmap, rotationDegrees: Int = 0): CompositionResult {
+        // Intermediate bitmaps are recycled as soon as they are no longer needed so
+        // we never leak native (ashmem) allocations across many analysis frames.
         val upright = rotate(frame, rotationDegrees)
         val scaled = downscale(upright, MAX_DETECT_EDGE)
         val detection = detector.detect(scaled)
-        val brightness = Luminance.average(samplePixels(upright))
+        val pixels = samplePixels(upright)
+        val brightness = Luminance.average(pixels)
         val tilt = tiltProvider.currentTiltDegrees()
+        if (upright !== frame) upright.recycle()
+        if (scaled !== upright) scaled.recycle()
         return CompositionScorer.score(detection, tilt, brightness)
     }
 
@@ -47,6 +52,13 @@ class LumaVisionAnalyzer(
         stop()
         detector.close()
     }
+
+    // NOTE (hardening audit, Prompt 12 follow-up): this analyzer, its ML Kit
+    // detector and the tilt sensor are never started/closed by an owner today
+    // (the real analysis pipeline from Prompt 7 is not yet wired to a screen).
+    // When it is connected, the screen/ViewModel MUST call start() on attach and
+    // close() on detach/onCleared — otherwise the accelerometer listener and ML
+    // Kit clients leak. Tracked for the Prompt 9 real-runtime follow-up.
 
     private fun rotate(bitmap: Bitmap, degrees: Int): Bitmap {
         val normalized = ((degrees % 360) + 360) % 360

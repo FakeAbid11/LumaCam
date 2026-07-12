@@ -21,7 +21,11 @@ import kotlin.coroutines.resume
  * the provider can map to calm user messages.
  */
 class OkHttpCloudClient(
-    private val baseClient: OkHttpClient = OkHttpClient()
+    private val baseClient: OkHttpClient = OkHttpClient.Builder()
+        .callTimeout(DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+        .connectTimeout(DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+        .readTimeout(DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+        .build()
 ) : CloudHttpClient {
 
     private val jsonMedia = "application/json; charset=utf-8".toMediaType()
@@ -32,12 +36,17 @@ class OkHttpCloudClient(
         body: String,
         timeoutMillis: Long
     ): CloudHttpResponse {
-        val client = baseClient.newBuilder()
-            .callTimeout(timeoutMillis, TimeUnit.MILLISECONDS)
-            .connectTimeout(timeoutMillis, TimeUnit.MILLISECONDS)
-            .readTimeout(timeoutMillis, TimeUnit.MILLISECONDS)
-            .build()
-
+        // Reuse a single shared client for the whole app lifetime (its dispatcher
+        // and connection pool are shared) instead of allocating one per request.
+        val client = if (timeoutMillis == DEFAULT_TIMEOUT_MS) {
+            baseClient
+        } else {
+            baseClient.newBuilder()
+                .callTimeout(timeoutMillis, TimeUnit.MILLISECONDS)
+                .connectTimeout(timeoutMillis, TimeUnit.MILLISECONDS)
+                .readTimeout(timeoutMillis, TimeUnit.MILLISECONDS)
+                .build()
+        }
         val requestBuilder = Request.Builder()
             .url(url)
             .post(body.toRequestBody(jsonMedia))
@@ -64,5 +73,9 @@ class OkHttpCloudClient(
                 }
             })
         }
+    }
+
+    private companion object {
+        const val DEFAULT_TIMEOUT_MS = 30_000L
     }
 }

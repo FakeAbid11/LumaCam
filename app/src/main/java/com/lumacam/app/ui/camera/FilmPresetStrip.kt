@@ -19,6 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
@@ -61,10 +63,19 @@ private fun PresetChip(preset: FilmPreset, selected: Boolean, onClick: () -> Uni
     val colorFilter = remember(preset.id) {
         ColorFilter.colorMatrix(ColorMatrix(preset.colorMatrix.copyOf()))
     }
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(onClick = onClick)
-    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .heightIn(min = 48.dp)
+                .clickable(
+                    onClick = onClick,
+                    onClickLabel = "Select ${preset.name} film preset"
+                )
+                .semantics(mergeDescendants = true) {
+                    contentDescription = "Film preset: ${preset.name}" +
+                        if (selected) ", selected" else ""
+                }
+        ) {
         Canvas(
             modifier = Modifier
                 .size(56.dp)

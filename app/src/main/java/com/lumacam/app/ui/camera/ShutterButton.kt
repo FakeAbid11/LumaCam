@@ -51,15 +51,17 @@ fun ShutterButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     scoreProgress: Float? = null,
-    glow: Boolean = false
+    glow: Boolean = false,
+    lowEndMode: Boolean = false
 ) {
     val animatedScore by animateFloatAsState(
         targetValue = scoreProgress?.coerceIn(0f, 1f) ?: 0f,
         animationSpec = tween(durationMillis = 700),
         label = "shutterScore"
     )
+    // Glow + pulse are non-essential flourishes; suppressed on low-end devices.
     val glowAlpha by animateFloatAsState(
-        targetValue = if (glow) 1f else 0f,
+        targetValue = if (glow && !lowEndMode) 1f else 0f,
         animationSpec = tween(durationMillis = 400),
         label = "shutterGlow"
     )
@@ -87,7 +89,7 @@ fun ShutterButton(
 
     val pulse = remember { Animatable(0f) }
     LaunchedEffect(captureKey) {
-        if (captureKey > 0) {
+        if (captureKey > 0 && !lowEndMode) {
             pulse.snapTo(0f)
             pulse.animateTo(1f, animationSpec = tween(durationMillis = 450))
         }

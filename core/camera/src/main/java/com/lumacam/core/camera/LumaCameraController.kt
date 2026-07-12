@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import javax.inject.Inject
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -88,7 +89,18 @@ class LumaCameraController @Inject constructor(
 
     private var filmProcessor: FilmSurfaceProcessor? = null
     private val photoBaker = FilmPhotoBaker()
-    private val bakeExecutor = Executors.newSingleThreadExecutor()
+    // Lazily (re)created so shutdown() can terminate them when backgrounded and a
+    // later bind() still has a live executor.
+    private var bakeExecutor: ExecutorService? =
+        Executors.newSingleThreadExecutor()
+    private var cameraExecutor: ExecutorService? =
+        Executors.newSingleThreadExecutor()
+
+    private fun bakeExecutor(): ExecutorService =
+        bakeExecutor ?: Executors.newSingleThreadExecutor().also { bakeExecutor = it }
+
+    private fun cameraExecutor(): ExecutorService =
+        cameraExecutor ?: Executors.newSingleThreadExecutor().also { cameraExecutor = it }
 
     @SuppressLint("MissingPermission")
     fun bind(previewView: PreviewView, lifecycleOwner: LifecycleOwner) {
@@ -125,11 +137,19 @@ class LumaCameraController @Inject constructor(
         val recorder = Recorder.Builder().build()
         val videoCaptureUC = VideoCapture.Builder(recorder).build()
 
-        // No-op analyzer kept bound for the future AI tier (PRD §5).
+        // No-op analyzer kept bound for the future AI tier (PRD §5). The frame is
+        // always closed (try/finally + camera executor) so a thrown analyzer never
+        // leaks an ImageProxy and stalls the camera pipeline.
         val imageAnalysis = ImageAnalysis.Builder()
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build()
-        imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(context)) { proxy -> proxy.close() }
+        imageAnalysis.setAnalyzer(cameraExecutor()) { proxy ->
+            try {
+                // Reserved for the future on-device analysis pipeline (Prompt 7).
+            } finally {
+                proxy.close()
+            }
+        }
 
         enumerateLenses(provider)
         val selector = buildSelector()
@@ -324,7 +344,7 @@ class LumaCameraController @Inject constructor(
                         return
                     }
                     // Bake the same film look into the full-res JPEG off the main thread.
-                    bakeExecutor.execute {
+                    bakeExecutor().execute {
                         try {
                             photoBaker.bake(file, preset)
                         } catch (e: Exception) {
@@ -578,6 +598,26 @@ class LumaCameraController @Inject constructor(
         camera = null
         filmProcessor?.release()
         filmProcessor = null
+    }
+
+    /**
+     * Full teardown used when the camera is backgrounded (ON_STOP) or the screen is
+     * disposed. Releases the film GL thread/EGL context and shuts the single-thread
+     * executors so nothing keeps running while the app is in the background
+     * (battery). Safe to call repeatedly.
+     */
+    fun shutdown() {
+        unbind()
+        try {
+            bakeExecutor?.shutdown()
+        } catch (_: Exception) {
+        }
+        bakeExecutor = null
+        try {
+            cameraExecutor?.shutdown()
+        } catch (_: Exception) {
+        }
+        cameraExecutor = null
     }
 
     companion object {

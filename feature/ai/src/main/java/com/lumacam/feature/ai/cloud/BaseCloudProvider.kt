@@ -26,6 +26,9 @@ abstract class BaseCloudProvider(
         } catch (e: CloudHttpException) {
             return CloudAiOutcome.Failure(CloudErrorMapper.fromTransport(e.kind))
         } catch (e: Exception) {
+            // Cancellation must propagate so structured concurrency (e.g. a screen
+            // dismissed mid-request) cancels cleanly instead of being swallowed.
+            if (e is kotlin.coroutines.cancellation.CancellationException) throw e
             return CloudAiOutcome.Failure(CloudAiError.Unknown(e.message ?: "analyze"))
         }
 
@@ -49,6 +52,7 @@ abstract class BaseCloudProvider(
         } catch (e: CloudHttpException) {
             return ConnectionTestResult.Failure(CloudErrorMapper.fromTransport(e.kind))
         } catch (e: Exception) {
+            if (e is kotlin.coroutines.cancellation.CancellationException) throw e
             return ConnectionTestResult.Failure(CloudAiError.Unknown(e.message ?: "test"))
         }
         return if (response.code in 200..299) {

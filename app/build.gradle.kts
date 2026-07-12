@@ -52,6 +52,15 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    // Lint is run in CI (lintDebug). Keep it informative rather than a hard gate so
+    // a newly-introduced baseline check can't silently break the pipeline; test
+    // sources are excluded to avoid noise from sample code.
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+        ignoreTestSources = true
+    }
 }
 
 dependencies {

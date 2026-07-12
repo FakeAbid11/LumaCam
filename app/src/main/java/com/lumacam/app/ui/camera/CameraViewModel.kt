@@ -20,6 +20,7 @@ import com.lumacam.feature.ai.benchmark.DeviceTier
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -47,6 +48,15 @@ class CameraViewModel @Inject constructor(
     val filmPreset: StateFlow<FilmPreset> = cameraController.filmPreset
     val previewFilterEnabled: StateFlow<Boolean> = cameraController.previewFilterEnabled
 
+    /**
+     * When true, non-essential visual flourishes (capture flash, shutter glow/pulse,
+     * continuous arrow pulse) are suppressed to keep low-end devices smooth. Defaults
+     * to the device-tier recommendation (off on LIMITED/BRUTAL_TRUTH) until the user
+     * preference is loaded; the user can override it via Settings.
+     */
+    private val _lowEndMode = MutableStateFlow(computeLowEndForTier(benchmarkStore.load()?.tier))
+    val lowEndMode: StateFlow<Boolean> = _lowEndMode.asStateFlow()
+
     init {
         viewModelScope.launch {
             val id = settingsRepository.filmPresetId.first()
@@ -55,13 +65,27 @@ class CameraViewModel @Inject constructor(
             val stored = settingsRepository.filmPreviewFilter.first()
             val enabled = stored ?: defaultPreviewFilterForDevice()
             cameraController.setPreviewFilterEnabled(enabled)
+
+            val effects = settingsRepository.visualEffectsEnabled.first()
+            _lowEndMode.value = effects ?: defaultLowEndForDevice()
         }
     }
 
     /** Low-tier devices default live preview filtering off (capture stays full-quality). */
-    private fun defaultPreviewFilterForDevice(): Boolean {
-        val tier = benchmarkStore.load()?.tier ?: return true
-        return tier != DeviceTier.LIMITED && tier != DeviceTier.BRUTAL_TRUTH
+    private fun defaultPreviewFilterForDevice(): Boolean = !computeLowEndForTier(benchmarkStore.load()?.tier)
+
+    /**
+     * Shared tier → "reduced visuals" decision used by both the film preview-filter
+     * default and the general visual-effects default, so the two never produce a
+     * half-reduced, inconsistent look on LIMITED/BRUTAL_TRUTH devices. Internal
+     * (visible for tests) to lock the contract.
+     */
+    internal fun computeLowEndForTier(tier: DeviceTier?): Boolean =
+        tier == DeviceTier.LIMITED || tier == DeviceTier.BRUTAL_TRUTH
+
+    fun setVisualEffects(enabled: Boolean) {
+        _lowEndMode.value = !enabled
+        viewModelScope.launch { settingsRepository.setVisualEffects(enabled) }
     }
 
     fun setFilmPreset(preset: FilmPreset) {
