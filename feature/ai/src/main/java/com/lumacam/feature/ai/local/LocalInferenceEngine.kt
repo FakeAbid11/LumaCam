@@ -58,7 +58,7 @@ class LocalInferenceException(
  */
 class PlaceholderLocalInferenceEngine : LocalInferenceEngine {
 
-    override suspend fun load(modelPath: String, multimodal: Boolean = false) {
+    override suspend fun load(modelPath: String, multimodal: Boolean) {
         throw LocalInferenceException(
             LocalInferenceError.RUNTIME_UNAVAILABLE,
             "On-device inference runtime is not bundled in this build."

@@ -14,7 +14,7 @@ class FakeLocalInferenceEngine(
     var closeCount = 0
     var lastPrompt: String? = null
 
-    override suspend fun load(modelPath: String) {
+    override suspend fun load(modelPath: String, multimodal: Boolean) {
         loadCount++
         onLoad()
     }
