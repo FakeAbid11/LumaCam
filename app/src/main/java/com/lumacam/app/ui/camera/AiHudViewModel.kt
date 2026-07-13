@@ -58,8 +58,16 @@ class AiHudViewModel @Inject constructor(
 
     private var job: Job? = null
 
-    private val aiModeState =
-        settingsRepository.aiMode.stateIn(viewModelScope, SharingStarted.Eagerly, AiMode.SMART)
+    /**
+     * Direct mode override. When set, it takes precedence over the persisted
+     * selection in [SettingsRepository] for the next pass — used by the UI's
+     * mode menu and by tests. Null means "use the persisted preference".
+     */
+    private val modeOverride = MutableStateFlow<AiMode?>(null)
+
+    fun setAiMode(mode: AiMode) {
+        modeOverride.value = mode
+    }
 
     /**
      * Starts a fresh analysis pass over [frame] (with [rotationDegrees]), streaming
@@ -101,7 +109,7 @@ class AiHudViewModel @Inject constructor(
      * (when a model is present), falling back to the offline Luma Vision pipeline.
      */
     private suspend fun resolveMode(): AiMode {
-        val chosen = aiModeState.value
+        val chosen = modeOverride.value ?: settingsRepository.aiMode.first()
         if (chosen != AiMode.SMART) return chosen
         val cloudEnabled = settingsRepository.cloudAiEnabled.first()
         if (cloudEnabled && cloudAiCredentials.hasApiKey(cloudAiCredentials.selectedProvider)) {

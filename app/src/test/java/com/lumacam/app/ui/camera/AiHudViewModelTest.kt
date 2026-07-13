@@ -24,7 +24,6 @@ import com.lumacam.feature.ai.local.LocalAiProvider
 import com.lumacam.feature.ai.local.LocalImage
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -60,7 +59,6 @@ class AiHudViewModelTest {
         Dispatchers.setMain(dispatcher)
 
         val settings = SettingsRepository(context)
-        settings.setAiMode(AiMode.LUMA_VISION); settings.aiMode.first { it == AiMode.LUMA_VISION }
         val vm = AiHudViewModel(
             analyzer = FakeCompositionAnalyzer(),
             cloudAiProvider = FakeCloudAiProvider(CloudAiOutcome.Success(FAKE_RESULT)),
@@ -69,6 +67,7 @@ class AiHudViewModelTest {
             cloudAiCredentials = FakeCloudAiCredentials(),
             localModelRepository = LocalModelRepository(context, LocalModelStorage(context))
         )
+        vm.setAiMode(AiMode.LUMA_VISION)
 
         // idle
         assertFalse(vm.state.value.active)
@@ -93,7 +92,6 @@ class AiHudViewModelTest {
         Dispatchers.setMain(dispatcher)
 
         val settings = SettingsRepository(context)
-        settings.setAiMode(AiMode.CLOUD_AI); settings.aiMode.first { it == AiMode.CLOUD_AI }
         val cloud = FakeCloudAiProvider(CloudAiOutcome.Success(CLOUD_RESULT))
         val vm = AiHudViewModel(
             analyzer = FakeCompositionAnalyzer(),
@@ -103,6 +101,7 @@ class AiHudViewModelTest {
             cloudAiCredentials = FakeCloudAiCredentials(),
             localModelRepository = LocalModelRepository(context, LocalModelStorage(context))
         )
+        vm.setAiMode(AiMode.CLOUD_AI)
 
         vm.startAnalysis(Bitmap.createBitmap(1, 1, ARGB_8888), 0)
         advanceUntilIdle()
@@ -118,7 +117,6 @@ class AiHudViewModelTest {
         Dispatchers.setMain(dispatcher)
 
         val settings = SettingsRepository(context)
-        settings.setAiMode(AiMode.CLOUD_AI); settings.aiMode.first { it == AiMode.CLOUD_AI }
         val vm = AiHudViewModel(
             analyzer = FakeCompositionAnalyzer(),
             cloudAiProvider = FakeCloudAiProvider(CloudAiOutcome.Failure(CloudAiErrorInvalidKey)),
@@ -127,6 +125,7 @@ class AiHudViewModelTest {
             cloudAiCredentials = FakeCloudAiCredentials(),
             localModelRepository = LocalModelRepository(context, LocalModelStorage(context))
         )
+        vm.setAiMode(AiMode.CLOUD_AI)
 
         vm.startAnalysis(Bitmap.createBitmap(1, 1, ARGB_8888), 0)
         advanceUntilIdle()
@@ -141,7 +140,6 @@ class AiHudViewModelTest {
         Dispatchers.setMain(dispatcher)
 
         val settings = SettingsRepository(context)
-        settings.setAiMode(AiMode.LOCAL_AI); settings.aiMode.first { it == AiMode.LOCAL_AI }
         val local = FakeLocalAiProvider(LocalAiOutcome.Success(LOCAL_RESULT))
         val vm = AiHudViewModel(
             analyzer = FakeCompositionAnalyzer(),
@@ -151,6 +149,7 @@ class AiHudViewModelTest {
             cloudAiCredentials = FakeCloudAiCredentials(),
             localModelRepository = LocalModelRepository(context, LocalModelStorage(context))
         )
+        vm.setAiMode(AiMode.LOCAL_AI)
 
         vm.startAnalysis(Bitmap.createBitmap(1, 1, ARGB_8888), 0)
         advanceUntilIdle()
@@ -166,7 +165,6 @@ class AiHudViewModelTest {
         Dispatchers.setMain(dispatcher)
 
         val settings = SettingsRepository(context)
-        settings.setAiMode(AiMode.SMART); settings.aiMode.first { it == AiMode.SMART }
         val cloud = FakeCloudAiProvider(CloudAiOutcome.Success(CLOUD_RESULT))
         val local = FakeLocalAiProvider(LocalAiOutcome.Success(LOCAL_RESULT))
         val vm = AiHudViewModel(
@@ -178,6 +176,7 @@ class AiHudViewModelTest {
             cloudAiCredentials = FakeCloudAiCredentials(keyPresent = false),
             localModelRepository = LocalModelRepository(context, LocalModelStorage(context))
         )
+        vm.setAiMode(AiMode.SMART)
 
         vm.startAnalysis(Bitmap.createBitmap(1, 1, ARGB_8888), 0)
         advanceUntilIdle()
