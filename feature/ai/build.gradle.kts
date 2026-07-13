@@ -14,7 +14,7 @@ spotless {
 
 android {
     namespace = "com.lumacam.feature.ai"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         // LiteRT-LM (litertlm-android) requires API 26+.

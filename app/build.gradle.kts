@@ -31,7 +31,7 @@ fun signingValue(propKey: String, envKey: String): String? =
 
 android {
     namespace = "com.lumacam.app"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.lumacam.app"

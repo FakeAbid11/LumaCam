@@ -13,7 +13,7 @@ spotless {
 
 android {
     namespace = "com.lumacam.feature.gallery"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 24
