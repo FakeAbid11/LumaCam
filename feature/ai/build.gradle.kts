@@ -51,7 +51,7 @@ dependencies {
     // successor to the maintenance-mode MediaPipe LLM Inference API. Runs .litertlm
     // models (Qwen2-VL, MiniCPM, Gemma, ...). Native libraries ship inside the AAR,
     // so no NDK/CMake is needed in this build.
-    implementation("com.google.ai.edge.litertlm:litertlm-android:0.14.0")
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.13.1")
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
