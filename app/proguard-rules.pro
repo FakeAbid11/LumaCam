@@ -54,3 +54,15 @@
 -dontwarn okhttp3.**
 -dontwarn okio.**
 -dontwarn org.conscrypt.**
+
+# ---- MediaPipe tasks-genai protobuf annotation stubs ----------------------
+# tasks-genai references 5 protobuf annotation classes
+# (Internal$ProtoMethodMayReturnNull, ProtoField, ProtoPresenceBits,
+# ProtoPresenceCheckedField, ProtoNonnullApi) that ship in NO published
+# protobuf release and are not needed at runtime. Tell R8 they may be
+# absent so release minification does not fail on "Missing class".
+-dontwarn com.google.protobuf.Internal**
+-dontwarn com.google.protobuf.ProtoField
+-dontwarn com.google.protobuf.ProtoPresenceBits
+-dontwarn com.google.protobuf.ProtoPresenceCheckedField
+-dontwarn com.google.protobuf.ProtoNonnullApi
