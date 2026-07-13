@@ -50,6 +50,9 @@ dependencies {
     // Local AI on-device inference (MediaPipe LLM Inference API / LiteRT GenAI).
     // Native libraries ship inside the AAR — no NDK/CMake needed in this build.
     implementation("com.google.mediapipe:tasks-genai:0.10.27")
+    // Provides com.google.mediapipe.framework.image.* (MPImage / BitmapImageBuilder)
+    // used by LlmInferenceSession.addImage(); not bundled by tasks-genai.
+    implementation("com.google.mediapipe:tasks-core:0.10.26")
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
