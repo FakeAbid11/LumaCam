@@ -167,6 +167,10 @@ class AiHudViewModelTest {
         val settings = SettingsRepository(context)
         val cloud = FakeCloudAiProvider(CloudAiOutcome.Success(CLOUD_RESULT))
         val local = FakeLocalAiProvider(LocalAiOutcome.Success(LOCAL_RESULT))
+        val localModelRepository = LocalModelRepository(context, LocalModelStorage(context))
+        // Robolectric shares the app context across test classes, so clear any
+        // selection left behind by another test to keep the fallback deterministic.
+        localModelRepository.activeModelId = null
         val vm = AiHudViewModel(
             analyzer = FakeCompositionAnalyzer(),
             cloudAiProvider = cloud,
@@ -174,7 +178,7 @@ class AiHudViewModelTest {
             settingsRepository = settings,
             // No key, cloud disabled by default, no model -> falls back to Luma Vision.
             cloudAiCredentials = FakeCloudAiCredentials(keyPresent = false),
-            localModelRepository = LocalModelRepository(context, LocalModelStorage(context))
+            localModelRepository = localModelRepository
         )
         vm.setAiMode(AiMode.SMART)
 
