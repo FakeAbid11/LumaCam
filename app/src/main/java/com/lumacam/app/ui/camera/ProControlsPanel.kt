@@ -12,6 +12,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
@@ -21,9 +22,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.lumacam.core.ui.theme.LumaBlack
+import com.lumacam.core.ui.theme.LumaGray500
+import com.lumacam.core.ui.theme.LumaWhite
 import com.lumacam.core.camera.CameraCapabilities
 import com.lumacam.core.camera.LensInfo
 import com.lumacam.core.camera.ManualCameraState
@@ -169,12 +171,12 @@ fun ProControlsContent(
                 Switch(
                     checked = manualState.hdrEnabled,
                     onCheckedChange = { onHdr(it) },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.Black,
-                        checkedTrackColor = Color.White,
-                        uncheckedThumbColor = Color(0xFF8A8A96),
-                        uncheckedTrackColor = Color(0xFF2A2A30)
-                    )
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = LumaBlack,
+                    checkedTrackColor = LumaWhite,
+                    uncheckedThumbColor = LumaGray500,
+                    uncheckedTrackColor = Color(0xFF2A2A30)
+                )
                 )
             }
         }
@@ -183,7 +185,7 @@ fun ProControlsContent(
 
 @Composable
 private fun SectionLabel(text: String) {
-    Text(text, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+    Text(text, style = MaterialTheme.typography.titleSmall, color = LumaWhite)
 }
 
 @Composable
@@ -199,8 +201,8 @@ private fun ProSlider(
         valueRange = valueRange,
         steps = steps,
         colors = SliderDefaults.colors(
-            thumbColor = Color.White,
-            activeTrackColor = Color.White,
+            thumbColor = LumaWhite,
+            activeTrackColor = LumaWhite,
             inactiveTrackColor = Color(0xFF3A3A42)
         )
     )
@@ -226,9 +228,9 @@ private fun ProChip(label: String, selected: Boolean, onClick: () -> Unit) {
         onClick = onClick,
         label = { Text(label) },
         colors = FilterChipDefaults.filterChipColors(
-            labelColor = Color.White,
-            selectedContainerColor = Color.White,
-            selectedLabelColor = Color.Black
+            labelColor = LumaWhite,
+            selectedContainerColor = LumaWhite,
+            selectedLabelColor = LumaBlack
         )
     )
 }

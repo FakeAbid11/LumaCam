@@ -22,7 +22,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
 import com.lumacam.core.ui.theme.LumaAccent
+import com.lumacam.core.ui.theme.LumaGray300
+import com.lumacam.core.ui.theme.LumaWhite
 import com.lumacam.feature.ai.CompositionResult
 
 /**
@@ -48,7 +51,7 @@ fun AiAssistantSheetContent(result: CompositionResult, modifier: Modifier = Modi
                 )
                 Text(
                     "Composition ${result.compositionScore}%",
-                    color = androidx.compose.ui.graphics.Color.White,
+                    color = LumaWhite,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -61,7 +64,7 @@ fun AiAssistantSheetContent(result: CompositionResult, modifier: Modifier = Modi
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
                     "Suggestions",
-                    color = androidx.compose.ui.graphics.Color(0xFFC7C7D1),
+                    color = LumaGray300,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -76,12 +79,12 @@ private fun InfoBlock(title: String, body: String) {
     Column(
         Modifier
             .fillMaxWidth()
-            .background(androidx.compose.ui.graphics.Color(0x22FFFFFF), RoundedCornerShape(14.dp))
+            .background(Color(0x22FFFFFF), RoundedCornerShape(14.dp))
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Text(title, color = androidx.compose.ui.graphics.Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text(body, color = androidx.compose.ui.graphics.Color(0xFFC7C7D1), fontSize = 13.sp)
+        Text(title, color = LumaWhite, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text(body, color = LumaGray300, fontSize = 13.sp)
     }
 }
 
@@ -89,7 +92,7 @@ private fun InfoBlock(title: String, body: String) {
 private fun SuggestionRow(text: String) {
     Row(verticalAlignment = Alignment.Top) {
         Box(
-            Modifier.padding(top = 2.dp).size(20.dp).background(androidx.compose.ui.graphics.Color(0x333A6FF8), CircleShape),
+            Modifier.padding(top = 2.dp).size(20.dp).background(Color(0x333A6FF8), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -100,6 +103,6 @@ private fun SuggestionRow(text: String) {
             )
         }
         Spacer(Modifier.width(12.dp))
-        Text(text, color = androidx.compose.ui.graphics.Color.White, fontSize = 14.sp)
+        Text(text, color = LumaWhite, fontSize = 14.sp)
     }
 }

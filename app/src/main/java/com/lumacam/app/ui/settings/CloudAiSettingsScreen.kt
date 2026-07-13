@@ -3,15 +3,9 @@ package com.lumacam.app.ui.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -28,11 +22,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,8 +37,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.lumacam.app.BuildConfig
+import com.lumacam.core.ui.components.LumaSettingCard
+import com.lumacam.core.ui.components.LumaSettingScaffold
 import com.lumacam.core.ui.theme.LumaAccent
-import com.lumacam.core.ui.theme.LumaBlack
 import com.lumacam.core.ui.theme.LumaGray500
 import com.lumacam.core.ui.theme.LumaWhite
 import com.lumacam.feature.ai.cloud.CloudProviderType
@@ -60,48 +52,23 @@ fun CloudAiSettingsScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    Scaffold(
-        containerColor = LumaBlack,
-        topBar = {
-            TopAppBar(
-                title = { Text("Cloud AI") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = LumaWhite)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = LumaBlack,
-                    titleContentColor = LumaWhite,
-                    navigationIconContentColor = LumaWhite
-                )
-            )
-        }
-    ) { inner ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(inner)
-                .widthIn(max = 600.dp)
-                .padding(horizontal = 20.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "Cloud AI is optional. Your API key is stored encrypted on this device " +
-                    "and is only sent to the provider you choose.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = LumaGray500
-            )
+    LumaSettingScaffold(
+        title = "Cloud AI",
+        onBack = onBack
+    ) {
+        Text(
+            "Cloud AI is optional. Your API key is stored encrypted on this device " +
+                "and is only sent to the provider you choose.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = LumaGray500
+        )
 
+        LumaSettingCard {
             ProviderDropdown(
                 selected = state.selectedProvider,
                 onSelect = viewModel::selectProvider
             )
-
             ApiKeyField(value = state.apiKey, onChange = viewModel::updateApiKey)
-
             OutlinedTextField(
                 value = state.baseUrl,
                 onValueChange = viewModel::updateBaseUrl,
@@ -110,7 +77,6 @@ fun CloudAiSettingsScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
-
             OutlinedTextField(
                 value = state.model,
                 onValueChange = viewModel::updateModel,
@@ -119,7 +85,6 @@ fun CloudAiSettingsScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
-
             Button(
                 onClick = viewModel::testConnection,
                 modifier = Modifier.fillMaxWidth(),
@@ -128,17 +93,23 @@ fun CloudAiSettingsScreen(
             ) {
                 Text("Test Connection")
             }
-
             TestStatus(state.testState)
+        }
 
-            if (BuildConfig.DEBUG) {
-                DebugAnalyzeSection(
-                    state = state.debugState,
-                    onRun = viewModel::runDebugAnalysis
-                )
+        if (BuildConfig.DEBUG) {
+            LumaSettingCard {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "DEBUG",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = LumaGray500
+                    )
+                    DebugAnalyzeSection(
+                        state = state.debugState,
+                        onRun = viewModel::runDebugAnalysis
+                    )
+                }
             }
-
-            Spacer(Modifier.height(24.dp))
         }
     }
 }
@@ -224,11 +195,6 @@ private fun TestStatus(state: TestConnectionState) {
 @Composable
 private fun DebugAnalyzeSection(state: DebugAnalyzeState, onRun: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            "DEBUG",
-            style = MaterialTheme.typography.labelMedium,
-            color = LumaGray500
-        )
         OutlinedButton(
             onClick = onRun,
             modifier = Modifier.fillMaxWidth(),

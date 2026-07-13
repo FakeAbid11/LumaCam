@@ -106,6 +106,7 @@ import com.lumacam.core.camera.FlashMode
 import com.lumacam.app.data.AiMode
 import com.lumacam.core.ui.components.GradientIcon
 import com.lumacam.core.ui.components.LumaBottomSheet
+import com.lumacam.core.ui.components.LumaPill
 import com.lumacam.core.ui.theme.LumaAccent
 import com.lumacam.core.ui.theme.LumaColors
 import com.lumacam.core.ui.theme.LumaShapes
@@ -704,33 +705,36 @@ private fun AiModeIndicator(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box {
-        Row(
+        LumaPill(
             modifier = Modifier
                 .heightIn(min = 48.dp)
                 .padding(start = 8.dp)
-                .background(Color(0x33000000), RoundedCornerShape(50))
-                .clickable { expanded = true }
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .clickable { expanded = true },
+            soft = true
         ) {
-            GradientIcon(
-                Icons.Filled.Bolt,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(Modifier.size(4.dp))
-            Text(
-                current.displayName,
-                color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-            Icon(
-                Icons.Filled.ArrowDropDown,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(20.dp)
-            )
+            Row(
+                Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                GradientIcon(
+                    Icons.Filled.Bolt,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.size(4.dp))
+                Text(
+                    current.displayName,
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Icon(
+                    Icons.Filled.ArrowDropDown,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             AiMode.entries.forEach { mode ->
@@ -775,55 +779,57 @@ private fun AiModeIndicator(
 /** Compact toggle for live-preview filtering; capture is always full-quality. */
 @Composable
 private fun PreviewFilterToggle(enabled: Boolean, onToggle: (Boolean) -> Unit) {
-    Row(
+    LumaPill(
         modifier = Modifier
             .heightIn(min = 48.dp)
-            .background(Color(0x66000000), RoundedCornerShape(50))
             .clickable { onToggle(!enabled) }
-            .padding(horizontal = 12.dp, vertical = 5.dp),
-        verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            if (enabled) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-            contentDescription = null,
-            tint = if (enabled) LumaAccent else Color.White,
-            modifier = Modifier.size(16.dp)
-        )
-        Spacer(Modifier.size(6.dp))
-        Text(
-            if (enabled) "Live filter on" else "Live filter off",
-            color = Color.White,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium
-        )
+        Row(
+            Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                if (enabled) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                contentDescription = null,
+                tint = if (enabled) LumaAccent else Color.White,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(Modifier.size(6.dp))
+            Text(
+                if (enabled) "Live filter on" else "Live filter off",
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
     }
 }
 
 @Composable
 private fun RecordingPill() {
-    Row(
-        modifier = Modifier
-            .background(Color(0x66000000), RoundedCornerShape(50))
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(Modifier.size(8.dp).background(Color(0xFFFF3B30), CircleShape))
-        Spacer(Modifier.size(6.dp))
-        Text("REC", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+    LumaPill {
+        Row(
+            Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(Modifier.size(8.dp).background(Color(0xFFFF3B30), CircleShape))
+            Spacer(Modifier.size(6.dp))
+            Text("REC", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        }
     }
 }
 
 @Composable
 private fun LockBadge(text: String) {
-    Text(
-        text,
-        color = Color.White,
-        fontSize = 11.sp,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier
-            .background(Color(0x66000000), RoundedCornerShape(50))
-            .padding(horizontal = 8.dp, vertical = 3.dp)
-    )
+    LumaPill {
+        Text(
+            text,
+            color = Color.White,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+        )
+    }
 }
 
 @Composable

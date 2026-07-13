@@ -28,4 +28,10 @@ object LumaColors {
 
     /** Fallback solid scrim (kept for non-Brush contexts). */
     val scrimSolid = Color(0xCC121218)
+
+    /** Standard semi-transparent black fill for floating camera chrome pills. */
+    val chromePill = Color(0x66000000)
+
+    /** Lighter semi-transparent fill for low-emphasis camera chrome chips. */
+    val chromePillSoft = Color(0x33000000)
 }

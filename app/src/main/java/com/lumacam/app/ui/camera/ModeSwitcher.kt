@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lumacam.core.ui.components.LumaPill
 
 enum class CaptureMode { PHOTO, VIDEO }
 
@@ -48,10 +49,8 @@ fun ModeSwitcher(
         label = "modeIndicatorOffset"
     )
 
-    Box(
-        modifier = modifier
-            .background(Color(0x66000000), RoundedCornerShape(50))
-            .padding(4.dp)
+    LumaPill(
+        modifier = modifier.padding(4.dp)
     ) {
         Box(
             modifier = Modifier
