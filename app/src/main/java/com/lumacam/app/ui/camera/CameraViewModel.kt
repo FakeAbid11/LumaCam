@@ -4,7 +4,10 @@ import androidx.camera.view.PreviewView
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lumacam.app.data.AiMode
+import com.lumacam.app.data.CloudAiCredentials
 import com.lumacam.app.data.DeviceBenchmarkStore
+import com.lumacam.app.data.LocalModelRepository
 import com.lumacam.app.data.SettingsRepository
 import com.lumacam.core.camera.CameraCapabilities
 import com.lumacam.core.camera.FlashMode
@@ -21,16 +24,20 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 @HiltViewModel
 class CameraViewModel @Inject constructor(
     private val cameraController: LumaCameraController,
     private val settingsRepository: SettingsRepository,
-    private val benchmarkStore: DeviceBenchmarkStore
+    private val benchmarkStore: DeviceBenchmarkStore,
+    private val cloudAiCredentials: CloudAiCredentials,
+    private val localModelRepository: LocalModelRepository
 ) : ViewModel() {
 
     val lensFacing: StateFlow<LensFacing> = cameraController.lensFacing
@@ -58,7 +65,20 @@ class CameraViewModel @Inject constructor(
     private val _lowEndMode = MutableStateFlow(computeLowEndForTier(benchmarkStore.load()?.tier))
     val lowEndMode: StateFlow<Boolean> = _lowEndMode.asStateFlow()
 
+    /** Selected AI analysis backend (persisted). */
+    val aiMode: StateFlow<AiMode> =
+        settingsRepository.aiMode.stateIn(viewModelScope, SharingStarted.Eagerly, AiMode.SMART)
+
+    /** Whether Cloud AI can be selected right now (a provider key is configured). */
+    private val _cloudAiAvailable = MutableStateFlow(false)
+    val cloudAiAvailable: StateFlow<Boolean> = _cloudAiAvailable.asStateFlow()
+
+    /** Whether Local AI can be selected right now (a model is selected + downloaded). */
+    private val _localAiAvailable = MutableStateFlow(false)
+    val localAiAvailable: StateFlow<Boolean> = _localAiAvailable.asStateFlow()
+
     init {
+        refreshAiAvailability()
         viewModelScope.launch {
             val id = settingsRepository.filmPresetId.first()
             if (id != null) cameraController.setFilmPreset(FilmPresetCatalog.byId(id))
@@ -79,6 +99,19 @@ class CameraViewModel @Inject constructor(
     fun setVisualEffects(enabled: Boolean) {
         _lowEndMode.value = !enabled
         viewModelScope.launch { settingsRepository.setVisualEffects(enabled) }
+    }
+
+    fun setAiMode(mode: AiMode) {
+        viewModelScope.launch { settingsRepository.setAiMode(mode) }
+    }
+
+    /**
+     * Recomputes whether Cloud AI / Local AI can be offered, e.g. after the user
+     * edits credentials or downloads a model in Settings. Safe to call on resume.
+     */
+    fun refreshAiAvailability() {
+        _cloudAiAvailable.value = cloudAiCredentials.hasApiKey(cloudAiCredentials.selectedProvider)
+        _localAiAvailable.value = localModelRepository.activeModel() != null
     }
 
     fun setFilmPreset(preset: FilmPreset) {

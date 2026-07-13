@@ -17,6 +17,7 @@ class SettingsRepository(private val context: Context) {
     private object Keys {
         val PRIVACY_MODE = booleanPreferencesKey("privacy_mode")
         val CLOUD_AI = booleanPreferencesKey("cloud_ai")
+        val AI_MODE = stringPreferencesKey("ai_mode")
         val FILM_PRESET = stringPreferencesKey("film_preset")
         val FILM_PREVIEW_FILTER = booleanPreferencesKey("film_preview_filter")
         val VISUAL_EFFECTS = booleanPreferencesKey("visual_effects")
@@ -27,6 +28,14 @@ class SettingsRepository(private val context: Context) {
 
     val cloudAiEnabled: Flow<Boolean> =
         context.dataStore.data.map { it[Keys.CLOUD_AI] ?: false }
+
+    /** Selected AI analysis backend; defaults to [AiMode.SMART]. */
+    val aiMode: Flow<AiMode> =
+        context.dataStore.data.map { prefs ->
+            prefs[Keys.AI_MODE]
+                ?.let { runCatching { AiMode.valueOf(it) }.getOrNull() }
+                ?: AiMode.SMART
+        }
 
     /** Selected film preset id, or null when nothing has been chosen yet. */
     val filmPresetId: Flow<String?> =
@@ -50,6 +59,10 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setCloudAi(enabled: Boolean) {
         context.dataStore.edit { it[Keys.CLOUD_AI] = enabled }
+    }
+
+    suspend fun setAiMode(mode: AiMode) {
+        context.dataStore.edit { it[Keys.AI_MODE] = mode.name }
     }
 
     suspend fun setFilmPreset(id: String) {

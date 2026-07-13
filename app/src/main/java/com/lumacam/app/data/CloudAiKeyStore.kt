@@ -15,7 +15,7 @@ import com.lumacam.feature.ai.cloud.CloudProviderType
  * Per-provider keys/base-URLs/models are kept separately so a user can configure
  * several providers and switch between them.
  */
-class CloudAiKeyStore(context: Context) {
+class CloudAiKeyStore(context: Context) : CloudAiCredentials {
 
     private val prefs: SharedPreferences = run {
         val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)

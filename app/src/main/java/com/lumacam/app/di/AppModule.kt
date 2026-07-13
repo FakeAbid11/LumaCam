@@ -3,6 +3,7 @@ package com.lumacam.app.di
 import android.content.Context
 import androidx.room.Room
 import com.lumacam.app.data.CaptureDao
+import com.lumacam.app.data.CloudAiCredentials
 import com.lumacam.app.data.CloudAiKeyStore
 import com.lumacam.app.data.DeviceBenchmarkStore
 import com.lumacam.app.data.DeviceCapabilityProbe
@@ -14,6 +15,7 @@ import com.lumacam.app.data.SettingsRepository
 import com.lumacam.feature.ai.CompositionAnalyzer
 import com.lumacam.feature.ai.vision.LumaVisionAnalyzer
 import com.lumacam.feature.ai.vision.LumaVisionCompositionAnalyzer
+import com.lumacam.feature.ai.cloud.CloudAiProvider
 import com.lumacam.feature.ai.cloud.CloudAiProviderFactory
 import com.lumacam.feature.ai.local.DefaultLocalAiProvider
 import com.lumacam.feature.ai.local.LocalAiProvider
@@ -64,6 +66,21 @@ object AppModule {
     @Provides
     @Singleton
     fun provideCloudAiProviderFactory(): CloudAiProviderFactory = CloudAiProviderFactory()
+
+    // Cloud AI backend, built from the currently-selected provider's stored
+    // credentials; consumed by the AI HUD view model to route analysis.
+    @Provides
+    @Singleton
+    fun provideCloudAiProvider(
+        factory: CloudAiProviderFactory,
+        keyStore: CloudAiKeyStore
+    ): CloudAiProvider = factory.create(keyStore.buildConfig(keyStore.selectedProvider))
+
+    // Read-only credentials view for availability checks (avoids leaking the
+    // EncryptedSharedPreferences-backed store into view models).
+    @Provides
+    @Singleton
+    fun provideCloudAiCredentials(keyStore: CloudAiKeyStore): CloudAiCredentials = keyStore
 
     // Local AI Model (PRD §4 Tier 3). On-device model download/selection/storage.
     // Provided in isolation here; wired into the "✨" analysis selection later

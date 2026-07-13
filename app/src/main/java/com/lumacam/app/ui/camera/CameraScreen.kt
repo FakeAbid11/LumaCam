@@ -48,6 +48,8 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -100,6 +102,7 @@ import com.lumacam.app.ui.camera.hud.HorizonOverlay
 import com.lumacam.app.ui.camera.hud.RecommendedActionButton
 import com.lumacam.app.ui.camera.hud.SubjectLockBadge
 import com.lumacam.core.camera.FlashMode
+import com.lumacam.app.data.AiMode
 import com.lumacam.core.ui.components.GradientIcon
 import com.lumacam.core.ui.components.LumaBottomSheet
 import com.lumacam.core.ui.theme.LumaAccent
@@ -144,6 +147,9 @@ private fun CameraContent(
     val previewFilterEnabled by viewModel.previewFilterEnabled.collectAsState()
     val lowEndMode by viewModel.lowEndMode.collectAsState()
     val hudState by hudViewModel.state.collectAsState()
+    val aiMode by viewModel.aiMode.collectAsState()
+    val cloudAiAvailable by viewModel.cloudAiAvailable.collectAsState()
+    val localAiAvailable by viewModel.localAiAvailable.collectAsState()
 
     var focusPoint by remember { mutableStateOf<Offset?>(null) }
     var fullScreenMedia by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -265,7 +271,10 @@ private fun CameraContent(
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_STOP -> viewModel.shutdown()
-                Lifecycle.Event.ON_RESUME -> previewView?.let { viewModel.bind(it, lifecycleOwner) }
+                Lifecycle.Event.ON_RESUME -> {
+                    previewView?.let { viewModel.bind(it, lifecycleOwner) }
+                    viewModel.refreshAiAvailability()
+                }
                 else -> {}
             }
         }
@@ -306,6 +315,7 @@ private fun CameraContent(
         if (gridEnabled) {
             CompositionGridOverlay()
         }
+        if (aiMode != AiMode.OFF) {
             hudState.result?.let { result ->
                 HorizonOverlay(tiltAngle = result.tiltAngle, isLevel = result.isLevel)
                 result.targetCrop?.let { GhostCropOverlay(bounds = it) }
@@ -328,7 +338,7 @@ private fun CameraContent(
                     }
                 }
             }
-        hudState.stage?.let { stage ->
+            hudState.stage?.let { stage ->
             AnimatedVisibility(
                 visible = hudState.isAnalyzing,
                 enter = fadeIn(),
@@ -336,6 +346,7 @@ private fun CameraContent(
             ) {
                 AnalyzingOverlay(current = stage)
             }
+        }
         }
         }
 
@@ -351,6 +362,10 @@ private fun CameraContent(
                 showProAvailable = capabilities?.supportsAnyManualControl == true,
                 proActive = showPro,
                 gridEnabled = gridEnabled,
+                aiMode = aiMode,
+                onAiModeChange = { viewModel.setAiMode(it) },
+                cloudAiAvailable = cloudAiAvailable,
+                localAiAvailable = localAiAvailable,
                 onFlash = { cycleFlash(viewModel, flashMode); interactionTick++ },
                 onSwitchLens = { viewModel.toggleLens(); interactionTick++ },
                 onPro = { showPro = true; interactionTick++ },
@@ -607,6 +622,10 @@ private fun TopBar(
     showProAvailable: Boolean,
     proActive: Boolean,
     gridEnabled: Boolean,
+    aiMode: AiMode,
+    onAiModeChange: (AiMode) -> Unit,
+    cloudAiAvailable: Boolean,
+    localAiAvailable: Boolean,
     onFlash: () -> Unit,
     onSwitchLens: () -> Unit,
     onPro: () -> Unit,
@@ -621,12 +640,26 @@ private fun TopBar(
             .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AiModeIndicator()
+        AiModeIndicator(
+            current = aiMode,
+            onSelect = onAiModeChange,
+            cloudAvailable = cloudAiAvailable,
+            localAvailable = localAiAvailable
+        )
         Spacer(Modifier.weight(1f))
         // Real Luma Vision analysis: taps grab a live preview frame and run it
-        // through the on-device analyzer (BUG 1).
-        IconButton(onClick = onAnalyze) {
-            GradientIcon(Icons.Filled.AutoAwesome, "Analyze scene", modifier = Modifier.size(24.dp))
+        // through the on-device analyzer (BUG 1). Disabled when AI is OFF.
+        IconButton(onClick = onAnalyze, enabled = aiMode != AiMode.OFF) {
+            if (aiMode == AiMode.OFF) {
+                Icon(
+                    Icons.Filled.AutoAwesome,
+                    "Analyze scene",
+                    tint = Color(0x88FFFFFF),
+                    modifier = Modifier.size(24.dp)
+                )
+            } else {
+                GradientIcon(Icons.Filled.AutoAwesome, "Analyze scene", modifier = Modifier.size(24.dp))
+            }
         }
         IconButton(onClick = onToggleGrid) {
             Icon(
@@ -656,31 +689,86 @@ private fun TopBar(
     }
 }
 
-/** Non-functional AI mode indicator ("⚡ Smart ▾"); dropdown wired in Prompt 10. */
+/**
+ * AI mode selector ("⚡ <mode> ▾"). Opens a dropdown to pick the analysis backend;
+ * Cloud AI / Local AI entries are disabled when their prerequisites (API key /
+ * downloaded model) aren't met. The chosen mode is persisted and shown here.
+ */
 @Composable
-private fun AiModeIndicator() {
-    Row(
-        modifier = Modifier
-            .heightIn(min = 48.dp)
-            .padding(start = 8.dp)
-            .background(Color(0x33000000), RoundedCornerShape(50))
-            .clickable { /* AI mode selector — Prompt 10 */ }
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        GradientIcon(
-            Icons.Filled.Bolt,
-            contentDescription = null,
-            modifier = Modifier.size(18.dp)
-        )
-        Spacer(Modifier.size(4.dp))
-        Text("Smart", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-        Icon(
-            Icons.Filled.ArrowDropDown,
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(20.dp)
-        )
+private fun AiModeIndicator(
+    current: AiMode,
+    onSelect: (AiMode) -> Unit,
+    cloudAvailable: Boolean,
+    localAvailable: Boolean
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            modifier = Modifier
+                .heightIn(min = 48.dp)
+                .padding(start = 8.dp)
+                .background(Color(0x33000000), RoundedCornerShape(50))
+                .clickable { expanded = true }
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            GradientIcon(
+                Icons.Filled.Bolt,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.size(4.dp))
+            Text(
+                current.displayName,
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Icon(
+                Icons.Filled.ArrowDropDown,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            AiMode.entries.forEach { mode ->
+                val enabled = when (mode) {
+                    AiMode.CLOUD_AI -> cloudAvailable
+                    AiMode.LOCAL_AI -> localAvailable
+                    else -> true
+                }
+                DropdownMenuItem(
+                    enabled = enabled,
+                    onClick = {
+                        onSelect(mode)
+                        expanded = false
+                    },
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            val suffix = when (mode) {
+                                AiMode.CLOUD_AI -> if (!cloudAvailable) " (no key)" else ""
+                                AiMode.LOCAL_AI -> if (!localAvailable) " (no model)" else ""
+                                else -> ""
+                            }
+                            Text(
+                                mode.displayName + suffix,
+                                color = if (enabled) Color.White else Color(0x88FFFFFF)
+                            )
+                            if (mode == current) {
+                                Spacer(Modifier.size(4.dp))
+                                Icon(
+                                    Icons.Filled.Check,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                )
+            }
+        }
     }
 }
 
