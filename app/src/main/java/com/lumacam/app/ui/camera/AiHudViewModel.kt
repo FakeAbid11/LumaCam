@@ -31,6 +31,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -68,6 +70,13 @@ class AiHudViewModel @Inject constructor(
     fun setAiMode(mode: AiMode) {
         modeOverride.value = mode
     }
+
+    /**
+     * Live "Cloud AI enabled" preference, captured as a [StateFlow] with a
+     * deterministic default so mode resolution never blocks on a DataStore read.
+     */
+    private val cloudAiEnabledState =
+        settingsRepository.cloudAiEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     /**
      * Starts a fresh analysis pass over [frame] (with [rotationDegrees]), streaming
@@ -111,7 +120,7 @@ class AiHudViewModel @Inject constructor(
     private suspend fun resolveMode(): AiMode {
         val chosen = modeOverride.value ?: settingsRepository.aiMode.first()
         if (chosen != AiMode.SMART) return chosen
-        val cloudEnabled = settingsRepository.cloudAiEnabled.first()
+        val cloudEnabled = cloudAiEnabledState.value
         if (cloudEnabled && cloudAiCredentials.hasApiKey(cloudAiCredentials.selectedProvider)) {
             return AiMode.CLOUD_AI
         }
