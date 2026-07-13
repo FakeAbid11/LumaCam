@@ -49,10 +49,18 @@ dependencies {
 
     // Local AI on-device inference (MediaPipe LLM Inference API / LiteRT GenAI).
     // Native libraries ship inside the AAR — no NDK/CMake needed in this build.
-    implementation("com.google.mediapipe:tasks-genai:0.10.27")
+    implementation("com.google.mediapipe:tasks-genai:0.10.27") {
+        // tasks-genai was built against full protobuf-java; its POM only pulls in
+        // protobuf-javalite, which lacks the annotation classes R8 needs. Exclude
+        // javalite and use the full artifact so release minification succeeds.
+        exclude(group = "com.google.protobuf", module = "protobuf-javalite")
+    }
     // Provides com.google.mediapipe.framework.image.* (MPImage / BitmapImageBuilder)
     // used by LlmInferenceSession.addImage(); not bundled by tasks-genai.
-    implementation("com.google.mediapipe:tasks-core:0.10.26")
+    implementation("com.google.mediapipe:tasks-core:0.10.26") {
+        exclude(group = "com.google.protobuf", module = "protobuf-javalite")
+    }
+    implementation("com.google.protobuf:protobuf-java:4.26.1")
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
