@@ -14,15 +14,15 @@ import kotlinx.coroutines.withContext
 /**
  * Real on-device inference engine backed by Google's MediaPipe LLM Inference
  * task (`com.google.mediapipe:tasks-genai`). It runs a vision-language model
- * (e.g. Gemma 3n / Gemma 3 1B in MediaPipe `.task` format) entirely on-device
+ * (e.g. Qwen2-VL-2B-Instruct in LiteRT `.litertlm` format) entirely on-device
  * and returns the model's raw text, which [DefaultLocalAiProvider] feeds through
  * [com.lumacam.feature.ai.cloud.CompositionJsonMapper] like every other backend.
  *
  * MediaPipe ships its native runtime inside the AAR, so no NDK/CMake is required
- * in our build. The model must be a MediaPipe `.task` file (not raw GGUF) — see
- * [LocalModelCatalog] for the curated download URLs. Vision input is enabled via
- * [GraphOptions.setEnableVisionModality]; [analyze] decodes the JPEG frame to a
- * [Bitmap] and attaches it alongside the prompt.
+ * in our build. The model must be a MediaPipe/LiteRT `.litertlm` (or `.task`)
+ * file — see [LocalModelCatalog] for the curated download URL. Vision input is
+ * enabled via [GraphOptions.setEnableVisionModality]; [analyze] decodes the JPEG
+ * frame to a [Bitmap] and attaches it alongside the prompt.
  *
  * Heavy JNI calls (model load + generate) run on [Dispatchers.IO] so they never
  * block the UI thread.

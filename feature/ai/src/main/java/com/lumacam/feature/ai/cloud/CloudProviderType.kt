@@ -22,9 +22,9 @@ enum class CloudProviderType(
     val requiresModel: Boolean = false
 ) {
     GEMINI(
-        displayName = "Google Gemini",
+        displayName = "Google AI Studio",
         defaultBaseUrl = "https://generativelanguage.googleapis.com",
-        defaultModel = "gemini-1.5-flash"
+        defaultModel = "gemini-2.0-flash"
     ),
     OPENAI(
         displayName = "OpenAI",

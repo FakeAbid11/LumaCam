@@ -17,7 +17,7 @@ import com.lumacam.core.ui.components.SettingRow
 import com.lumacam.core.ui.components.SettingSwitchRow
 
 /**
- * Settings (PRD S6). Real content — AI tiers, Gemini key, privacy — is built out
+ * Settings (PRD S6). Real content — AI tiers, AI Studio key, privacy — is built out
  * in later prompts; this provides the structure and navigation. The "Visual
  * effects" row is the one live, persisted setting (see [SettingsContentViewModel]).
  */

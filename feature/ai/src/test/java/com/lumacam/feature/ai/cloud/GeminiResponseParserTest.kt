@@ -37,7 +37,7 @@ class GeminiResponseParserTest {
         provider.analyze(CloudImage(byteArrayOf(1)))
 
         assertEquals("g-key", http.lastHeaders["x-goog-api-key"])
-        assertTrue(http.lastUrl!!.contains("gemini-1.5-flash:generateContent"))
+        assertTrue(http.lastUrl!!.contains("gemini-2.0-flash:generateContent"))
         assertTrue(http.lastBody!!.contains("inline_data"))
     }
 }
