@@ -34,4 +34,22 @@ object LumaColors {
 
     /** Lighter semi-transparent fill for low-emphasis camera chrome chips. */
     val chromePillSoft = Color(0x33000000)
+
+    /** Faint outline used on the floating preview card and gallery thumbnail. */
+    val chromeBorder = Color(0x22FFFFFF)
+
+    /** Soft semi-transparent fill (e.g. gallery thumbnail background). */
+    val chromeScrim = Color(0x33FFFFFF)
+
+    /** Medium semi-transparent fill (e.g. gallery thumbnail border). */
+    val chromeScrimMedium = Color(0x55FFFFFF)
+
+    /** Muted foreground for disabled/inactive chrome icons. */
+    val chromeMuted = Color(0x88FFFFFF)
+
+    /** Inactive track color for the zoom slider. */
+    val sliderTrackInactive = Color(0x66FFFFFF)
+
+    /** Red dot used by the recording indicator. */
+    val recIndicator = Color(0xFFFF3B30)
 }

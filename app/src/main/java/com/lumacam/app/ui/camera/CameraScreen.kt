@@ -15,7 +15,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,7 +32,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -71,9 +69,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedback
@@ -81,10 +77,8 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -111,6 +105,7 @@ import com.lumacam.core.ui.theme.LumaAccent
 import com.lumacam.core.ui.theme.LumaColors
 import com.lumacam.core.ui.theme.LumaShapes
 import com.lumacam.core.ui.theme.LumaSpacing
+import com.lumacam.core.ui.theme.LumaWhite
 import com.lumacam.feature.ai.RecommendedAction
 import kotlinx.coroutines.delay
 
@@ -292,7 +287,7 @@ private fun CameraContent(
                 .fillMaxSize()
                 .padding(LumaSpacing.md)
                 .clip(LumaShapes.extraLarge)
-                .border(1.dp, Color(0x22FFFFFF), LumaShapes.extraLarge)
+                .border(1.dp, LumaColors.chromeBorder, LumaShapes.extraLarge)
                 .background(LumaColors.chromeBlack)
         ) {
         AndroidView(
@@ -309,7 +304,7 @@ private fun CameraContent(
                 Modifier
                     .offset { IntOffset((pt.x - 40).toInt(), (pt.y - 40).toInt()) }
                     .size(80.dp)
-                    .border(1.5.dp, Color.White, CircleShape)
+                    .border(1.5.dp, LumaWhite, CircleShape)
             )
         }
 
@@ -399,7 +394,7 @@ private fun CameraContent(
                 }
             }
             error?.let {
-                Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
         }
 
@@ -426,9 +421,9 @@ private fun CameraContent(
                                     onValueChange = { viewModel.setZoomRatio(it); interactionTick++ },
                                     valueRange = z.minZoomRatio..z.maxZoomRatio,
                                     colors = SliderDefaults.colors(
-                                        thumbColor = Color.White,
-                                        activeTrackColor = Color.White,
-                                        inactiveTrackColor = Color(0x66FFFFFF)
+                                        thumbColor = LumaWhite,
+                                        activeTrackColor = LumaWhite,
+                                        inactiveTrackColor = LumaColors.sliderTrackInactive
                                     ),
                                     modifier = Modifier.width(sliderWidth)
                                 )
@@ -590,31 +585,7 @@ private fun CaptureFlashOverlay(
     if (lowEndMode) return
     val alpha = captureFlash.value
     if (alpha > 0f) {
-        Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = alpha)))
-    }
-}
-
-/**
- * Hexagonal settings affordance (Doka-Cam visual language) replacing the default
- * gear. Drawn as a stroked hexagon outline; the surrounding [IconButton] handles
- * the tap. Neutral white tint — it is a utility, not an AI-active control.
- */
-@Composable
-private fun HexSettingsIcon(modifier: Modifier = Modifier, tint: Color = Color.White) {
-    Canvas(modifier = modifier.size(24.dp)) {
-        val cx = size.width / 2f
-        val cy = size.height / 2f
-        val r = size.minDimension / 2f * 0.92f
-        val path = Path().apply {
-            for (i in 0..5) {
-                val angle = Math.toRadians(60.0 * i - 90.0)
-                val x = cx + r * kotlin.math.cos(angle).toFloat()
-                val y = cy + r * kotlin.math.sin(angle).toFloat()
-                if (i == 0) moveTo(x, y) else lineTo(x, y)
-            }
-            close()
-        }
-        drawPath(path, color = tint, style = Stroke(width = 2.dp.toPx()))
+        Box(Modifier.fillMaxSize().background(LumaWhite.copy(alpha = alpha)))
     }
 }
 
@@ -652,11 +623,11 @@ private fun TopBar(
         // Real Luma Vision analysis: taps grab a live preview frame and run it
         // through the on-device analyzer (BUG 1). Disabled when AI is OFF.
         IconButton(onClick = onAnalyze, enabled = aiMode != AiMode.OFF) {
-            if (aiMode == AiMode.OFF) {
+                    if (aiMode == AiMode.OFF) {
                 Icon(
                     Icons.Filled.AutoAwesome,
                     "Analyze scene",
-                    tint = Color(0x88FFFFFF),
+                    tint = LumaColors.chromeMuted,
                     modifier = Modifier.size(24.dp)
                 )
             } else {
@@ -667,26 +638,26 @@ private fun TopBar(
             Icon(
                 if (gridEnabled) Icons.Filled.GridOn else Icons.Filled.GridOff,
                 "Grid",
-                tint = Color.White
+                tint = LumaWhite
             )
         }
         IconButton(onClick = onFlash) {
-            Icon(flashIcon(flashMode), "Flash mode", tint = Color.White)
+            Icon(flashIcon(flashMode), "Flash mode", tint = LumaWhite)
         }
         IconButton(onClick = onSwitchLens) {
-            Icon(Icons.Filled.Cameraswitch, "Switch camera", tint = Color.White)
+            Icon(Icons.Filled.Cameraswitch, "Switch camera", tint = LumaWhite)
         }
         if (showProAvailable) {
             IconButton(onClick = onPro) {
                 if (proActive) {
                     GradientIcon(Icons.Filled.Tune, "Pro controls", modifier = Modifier.size(24.dp))
                 } else {
-                    Icon(Icons.Filled.Tune, "Pro controls", tint = Color.White)
+                    Icon(Icons.Filled.Tune, "Pro controls", tint = LumaWhite)
                 }
             }
         }
         IconButton(onClick = onSettings) {
-            HexSettingsIcon()
+            Icon(Icons.Filled.Settings, "Settings", tint = LumaWhite)
         }
     }
 }
@@ -724,14 +695,13 @@ private fun AiModeIndicator(
                 Spacer(Modifier.size(4.dp))
                 Text(
                     current.displayName,
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold
+                    color = LumaWhite,
+                    style = MaterialTheme.typography.labelLarge
                 )
                 Icon(
                     Icons.Filled.ArrowDropDown,
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = LumaWhite,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -755,16 +725,17 @@ private fun AiModeIndicator(
                     },
                     text = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                mode.displayName + suffix,
-                                color = Color.White
-                            )
+                        Text(
+                            mode.displayName + suffix,
+                            color = LumaWhite,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
                             if (mode == current) {
                                 Spacer(Modifier.size(4.dp))
                                 Icon(
                                     Icons.Filled.Check,
                                     contentDescription = null,
-                                    tint = Color.White,
+                                    tint = LumaWhite,
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
@@ -791,15 +762,14 @@ private fun PreviewFilterToggle(enabled: Boolean, onToggle: (Boolean) -> Unit) {
             Icon(
                 if (enabled) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                 contentDescription = null,
-                tint = if (enabled) LumaAccent else Color.White,
+                tint = if (enabled) LumaAccent else LumaWhite,
                 modifier = Modifier.size(16.dp)
             )
             Spacer(Modifier.size(6.dp))
             Text(
                 if (enabled) "Live filter on" else "Live filter off",
-                color = Color.White,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
+                color = LumaWhite,
+                style = MaterialTheme.typography.labelMedium
             )
         }
     }
@@ -812,9 +782,9 @@ private fun RecordingPill() {
             Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(Modifier.size(8.dp).background(Color(0xFFFF3B30), CircleShape))
+            Box(Modifier.size(8.dp).background(LumaColors.recIndicator, CircleShape))
             Spacer(Modifier.size(6.dp))
-            Text("REC", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Text("REC", color = LumaWhite, style = MaterialTheme.typography.labelMedium)
         }
     }
 }
@@ -824,9 +794,8 @@ private fun LockBadge(text: String) {
     LumaPill {
         Text(
             text,
-            color = Color.White,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
+            color = LumaWhite,
+            style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
         )
     }
@@ -838,8 +807,8 @@ private fun GalleryThumbnail(uri: Uri?, onClick: () -> Unit, modifier: Modifier 
         modifier = modifier
             .size(48.dp)
             .clickable(enabled = uri != null, onClick = onClick)
-            .background(Color(0x33FFFFFF), RoundedCornerShape(10.dp))
-            .border(1.dp, Color(0x55FFFFFF), RoundedCornerShape(10.dp)),
+            .background(LumaColors.chromeScrim, LumaShapes.small)
+            .border(1.dp, LumaColors.chromeScrimMedium, LumaShapes.small),
         contentAlignment = Alignment.Center
     ) {
         val context = LocalContext.current
