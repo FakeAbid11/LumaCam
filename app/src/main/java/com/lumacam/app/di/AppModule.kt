@@ -19,7 +19,7 @@ import com.lumacam.feature.ai.cloud.CloudAiProvider
 import com.lumacam.feature.ai.cloud.CloudAiProviderFactory
 import com.lumacam.feature.ai.local.DefaultLocalAiProvider
 import com.lumacam.feature.ai.local.LocalAiProvider
-import com.lumacam.feature.ai.local.MediaPipeLocalInferenceEngine
+import com.lumacam.feature.ai.local.LiteRtLocalInferenceEngine
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -102,9 +102,10 @@ object AppModule {
     fun provideLocalModelDownloader(storage: LocalModelStorage): LocalModelDownloader =
         LocalModelDownloader(storage)
 
-    // On-device inference via the MediaPipe LLM Inference API (LiteRT GenAI).
-    // Native libs ship inside the tasks-genai AAR, so no NDK/CMake is required
-    // in this build. The engine loads the selected .task model on first analyze().
+    // On-device inference via Google's LiteRT-LM runtime (the recommended
+    // successor to the maintenance-mode MediaPipe LLM Inference API). Native
+    // libs ship inside the litertlm-android AAR, so no NDK/CMake is required
+    // in this build. The engine loads the selected .litertlm model on first analyze().
     @Provides
     @Singleton
     fun provideLocalAiProvider(
@@ -112,7 +113,7 @@ object AppModule {
         repository: LocalModelRepository
     ): LocalAiProvider =
         DefaultLocalAiProvider(
-            engine = MediaPipeLocalInferenceEngine(context),
+            engine = LiteRtLocalInferenceEngine(context),
             activeModel = { repository.activeModel() }
         )
 

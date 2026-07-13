@@ -5,10 +5,11 @@ package com.lumacam.feature.ai.local
  * of the app (providers, view models, UI) only ever touches this interface — never
  * JNI, NDK, or a specific runtime.
  *
- * The real engine is [MediaPipeLocalInferenceEngine], which runs on-device models
- * through the MediaPipe LLM Inference API (LiteRT GenAI). No NDK/CMake is needed:
- * the native libraries ship inside the `com.google.mediapipe:tasks-genai` AAR, so
- * the runtime is pulled in purely as an Android dependency and only exercised on a
+ * The real engine is [LiteRtLocalInferenceEngine], which runs on-device models
+ * through Google's LiteRT-LM runtime (`com.google.ai.edge.litertlm:litertlm-android`)
+ * — the recommended successor to the now maintenance-mode MediaPipe LLM Inference
+ * API. No NDK/CMake is needed: the native libraries ship inside the AAR, so the
+ * runtime is pulled in purely as an Android dependency and only exercised on a
  * physical device (it cannot run on the JVM/CI).
  *
  * Implementations must translate native failures into [LocalInferenceException]
@@ -17,8 +18,12 @@ package com.lumacam.feature.ai.local
  */
 interface LocalInferenceEngine {
 
-    /** Loads the model at [modelPath] into memory, ready for [analyze]. */
-    suspend fun load(modelPath: String)
+    /**
+     * Loads the model at [modelPath] into memory, ready for [analyze].
+     * [multimodal] tells the engine whether to initialize a vision backend so an
+     * image can be attached during [analyze] (ignored by text-only models).
+     */
+    suspend fun load(modelPath: String, multimodal: Boolean = false)
 
     /**
      * Runs the loaded model on [image] with [prompt], returning the model's raw
@@ -53,7 +58,7 @@ class LocalInferenceException(
  */
 class PlaceholderLocalInferenceEngine : LocalInferenceEngine {
 
-    override suspend fun load(modelPath: String) {
+    override suspend fun load(modelPath: String, multimodal: Boolean = false) {
         throw LocalInferenceException(
             LocalInferenceError.RUNTIME_UNAVAILABLE,
             "On-device inference runtime is not bundled in this build."

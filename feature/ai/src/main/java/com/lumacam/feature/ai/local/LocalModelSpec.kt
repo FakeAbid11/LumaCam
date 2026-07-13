@@ -12,6 +12,8 @@ package com.lumacam.feature.ai.local
  *   `Content-Length` at download time and is only used for storage pre-checks/UI.
  * @param quantization quantization format (e.g. "Q8_0", "Q4_K_M").
  * @param minRamMb recommended minimum device RAM to run the model comfortably.
+ * @param multimodal whether the model accepts image input (vision-language). When
+ *   true, the engine initializes a vision backend so a captured frame can be attached.
  * @param fileName the on-disk file name once downloaded.
  * @param downloadUrl direct URL to the model file (e.g. Hugging Face `resolve`).
  */
@@ -22,6 +24,7 @@ data class LocalModelSpec(
     val sizeBytes: Long,
     val quantization: String,
     val minRamMb: Int,
+    val multimodal: Boolean = false,
     val fileName: String,
     val downloadUrl: String
 ) {

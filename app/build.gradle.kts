@@ -35,7 +35,7 @@ android {
 
     defaultConfig {
         applicationId = "com.lumacam.app"
-        // MediaPipe's LLM Inference (tasks-genai) AAR requires API 26.
+        // LiteRT-LM (litertlm-android) requires API 26+.
         minSdk = 26
         targetSdk = 34
         // Monotonic in CI (base + run number); falls back to 1 for local builds.

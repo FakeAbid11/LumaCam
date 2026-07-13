@@ -17,7 +17,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        // MediaPipe's LLM Inference (tasks-genai) AAR requires API 26.
+        // LiteRT-LM (litertlm-android) requires API 26+.
         minSdk = 26
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
@@ -47,12 +47,11 @@ dependencies {
     implementation(libs.okio)
     implementation(libs.kotlinx.serialization.json)
 
-    // Local AI on-device inference (MediaPipe LLM Inference API / LiteRT GenAI).
-    // Native libraries ship inside the AAR — no NDK/CMake needed in this build.
-    implementation("com.google.mediapipe:tasks-genai:0.10.27")
-    // Provides com.google.mediapipe.framework.image.* (MPImage / BitmapImageBuilder)
-    // used by LlmInferenceSession.addImage(); not bundled by tasks-genai.
-    implementation("com.google.mediapipe:tasks-core:0.10.26")
+    // Local AI on-device inference via Google's LiteRT-LM runtime — the recommended
+    // successor to the maintenance-mode MediaPipe LLM Inference API. Runs .litertlm
+    // models (Qwen2-VL, MiniCPM, Gemma, ...). Native libraries ship inside the AAR,
+    // so no NDK/CMake is needed in this build.
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.14.0")
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

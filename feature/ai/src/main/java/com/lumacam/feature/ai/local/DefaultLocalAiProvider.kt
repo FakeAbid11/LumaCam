@@ -17,7 +17,7 @@ import java.io.File
  * [activeModel] and [fileExists] are injected so the whole flow is JVM-unit-testable
  * with a fake [LocalInferenceEngine] and no real filesystem or native runtime.
  *
- * @param engine the (native) inference seam — [MediaPipeLocalInferenceEngine]
+ * @param engine the (native) inference seam — [LiteRtLocalInferenceEngine]
  *   when running on a device.
  * @param activeModel supplies the currently-selected downloaded model, or null.
  * @param fileExists checks whether a model file is present on disk.
@@ -36,7 +36,7 @@ class DefaultLocalAiProvider(
         }
 
         return try {
-            engine.load(active.filePath)
+            engine.load(active.filePath, active.spec.multimodal)
             val prompt = CompositionPromptBuilder.build(context)
             val raw = engine.analyze(image, prompt)
             val result = CompositionJsonMapper.parse(raw)
