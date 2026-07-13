@@ -29,6 +29,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -55,6 +57,9 @@ class AiHudViewModel @Inject constructor(
     val state: StateFlow<AiHudState> = _state.asStateFlow()
 
     private var job: Job? = null
+
+    private val aiModeState =
+        settingsRepository.aiMode.stateIn(viewModelScope, SharingStarted.Eagerly, AiMode.SMART)
 
     /**
      * Starts a fresh analysis pass over [frame] (with [rotationDegrees]), streaming
@@ -96,7 +101,7 @@ class AiHudViewModel @Inject constructor(
      * (when a model is present), falling back to the offline Luma Vision pipeline.
      */
     private suspend fun resolveMode(): AiMode {
-        val chosen = settingsRepository.aiMode.first()
+        val chosen = aiModeState.value
         if (chosen != AiMode.SMART) return chosen
         val cloudEnabled = settingsRepository.cloudAiEnabled.first()
         if (cloudEnabled && cloudAiCredentials.hasApiKey(cloudAiCredentials.selectedProvider)) {
