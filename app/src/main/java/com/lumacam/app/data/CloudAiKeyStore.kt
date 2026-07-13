@@ -28,7 +28,7 @@ class CloudAiKeyStore(context: Context) : CloudAiCredentials {
         )
     }
 
-    var selectedProvider: CloudProviderType
+    override var selectedProvider: CloudProviderType
         get() = prefs.getString(KEY_SELECTED, null)
             ?.let { runCatching { CloudProviderType.valueOf(it) }.getOrNull() }
             ?: CloudProviderType.GEMINI
@@ -55,7 +55,7 @@ class CloudAiKeyStore(context: Context) : CloudAiCredentials {
         prefs.edit().putString(keyFor(PREFIX_MODEL, type), value.trim()).apply()
     }
 
-    fun hasApiKey(type: CloudProviderType): Boolean = getApiKey(type).isNotBlank()
+    override fun hasApiKey(type: CloudProviderType): Boolean = getApiKey(type).isNotBlank()
 
     /** Assembles a [CloudAiConfig] for [type] from the stored values. */
     fun buildConfig(type: CloudProviderType): CloudAiConfig = CloudAiConfig(
