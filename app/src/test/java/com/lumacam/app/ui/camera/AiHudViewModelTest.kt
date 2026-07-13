@@ -59,7 +59,7 @@ class AiHudViewModelTest {
         Dispatchers.setMain(dispatcher)
 
         val settings = SettingsRepository(context)
-        settings.setAiMode(AiMode.LUMA_VISION)
+        settings.setAiMode(AiMode.LUMA_VISION); settings.aiMode.first { it == AiMode.LUMA_VISION }
         val vm = AiHudViewModel(
             analyzer = FakeCompositionAnalyzer(),
             cloudAiProvider = FakeCloudAiProvider(CloudAiOutcome.Success(FAKE_RESULT)),
@@ -92,7 +92,7 @@ class AiHudViewModelTest {
         Dispatchers.setMain(dispatcher)
 
         val settings = SettingsRepository(context)
-        settings.setAiMode(AiMode.CLOUD_AI)
+        settings.setAiMode(AiMode.CLOUD_AI); settings.aiMode.first { it == AiMode.CLOUD_AI }
         val cloud = FakeCloudAiProvider(CloudAiOutcome.Success(CLOUD_RESULT))
         val vm = AiHudViewModel(
             analyzer = FakeCompositionAnalyzer(),
@@ -117,7 +117,7 @@ class AiHudViewModelTest {
         Dispatchers.setMain(dispatcher)
 
         val settings = SettingsRepository(context)
-        settings.setAiMode(AiMode.CLOUD_AI)
+        settings.setAiMode(AiMode.CLOUD_AI); settings.aiMode.first { it == AiMode.CLOUD_AI }
         val vm = AiHudViewModel(
             analyzer = FakeCompositionAnalyzer(),
             cloudAiProvider = FakeCloudAiProvider(CloudAiOutcome.Failure(CloudAiErrorInvalidKey)),
@@ -140,7 +140,7 @@ class AiHudViewModelTest {
         Dispatchers.setMain(dispatcher)
 
         val settings = SettingsRepository(context)
-        settings.setAiMode(AiMode.LOCAL_AI)
+        settings.setAiMode(AiMode.LOCAL_AI); settings.aiMode.first { it == AiMode.LOCAL_AI }
         val local = FakeLocalAiProvider(LocalAiOutcome.Success(LOCAL_RESULT))
         val vm = AiHudViewModel(
             analyzer = FakeCompositionAnalyzer(),
@@ -165,7 +165,7 @@ class AiHudViewModelTest {
         Dispatchers.setMain(dispatcher)
 
         val settings = SettingsRepository(context)
-        settings.setAiMode(AiMode.SMART)
+        settings.setAiMode(AiMode.SMART); settings.aiMode.first { it == AiMode.SMART }
         val cloud = FakeCloudAiProvider(CloudAiOutcome.Success(CLOUD_RESULT))
         val local = FakeLocalAiProvider(LocalAiOutcome.Success(LOCAL_RESULT))
         val vm = AiHudViewModel(
