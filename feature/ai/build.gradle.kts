@@ -17,7 +17,8 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        minSdk = 24
+        // MediaPipe's LLM Inference (tasks-genai) AAR requires API 26.
+        minSdk = 26
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
@@ -45,6 +46,10 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okio)
     implementation(libs.kotlinx.serialization.json)
+
+    // Local AI on-device inference (MediaPipe LLM Inference API / LiteRT GenAI).
+    // Native libraries ship inside the AAR — no NDK/CMake needed in this build.
+    implementation("com.google.mediapipe:tasks-genai:0.10.27")
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

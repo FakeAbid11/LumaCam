@@ -19,7 +19,7 @@ import com.lumacam.feature.ai.cloud.CloudAiProvider
 import com.lumacam.feature.ai.cloud.CloudAiProviderFactory
 import com.lumacam.feature.ai.local.DefaultLocalAiProvider
 import com.lumacam.feature.ai.local.LocalAiProvider
-import com.lumacam.feature.ai.local.PlaceholderLocalInferenceEngine
+import com.lumacam.feature.ai.local.MediaPipeLocalInferenceEngine
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -102,13 +102,17 @@ object AppModule {
     fun provideLocalModelDownloader(storage: LocalModelStorage): LocalModelDownloader =
         LocalModelDownloader(storage)
 
-    // Uses the placeholder inference engine until a real native GGUF runtime is
-    // bundled (a deliberately isolated step — see LocalInferenceEngine docs).
+    // On-device inference via the MediaPipe LLM Inference API (LiteRT GenAI).
+    // Native libs ship inside the tasks-genai AAR, so no NDK/CMake is required
+    // in this build. The engine loads the selected .task model on first analyze().
     @Provides
     @Singleton
-    fun provideLocalAiProvider(repository: LocalModelRepository): LocalAiProvider =
+    fun provideLocalAiProvider(
+        @ApplicationContext context: Context,
+        repository: LocalModelRepository
+    ): LocalAiProvider =
         DefaultLocalAiProvider(
-            engine = PlaceholderLocalInferenceEngine(),
+            engine = MediaPipeLocalInferenceEngine(context),
             activeModel = { repository.activeModel() }
         )
 

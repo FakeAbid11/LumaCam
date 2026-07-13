@@ -3,12 +3,13 @@ package com.lumacam.feature.ai.local
 /**
  * The single, clean Kotlin seam behind which ALL native inference lives. The rest
  * of the app (providers, view models, UI) only ever touches this interface — never
- * JNI, NDK, or a specific runtime (llama.cpp, MediaPipe, etc.).
+ * JNI, NDK, or a specific runtime.
  *
- * A concrete engine that bundles a native GGUF runtime is a deliberately isolated,
- * separate step: adding NDK/CMake to the build changes CI requirements and can only
- * be verified on a physical device, so it is not wired in yet. Until then,
- * [PlaceholderLocalInferenceEngine] stands in and reports [LocalInferenceError.RUNTIME_UNAVAILABLE].
+ * The real engine is [MediaPipeLocalInferenceEngine], which runs on-device models
+ * through the MediaPipe LLM Inference API (LiteRT GenAI). No NDK/CMake is needed:
+ * the native libraries ship inside the `com.google.mediapipe:tasks-genai` AAR, so
+ * the runtime is pulled in purely as an Android dependency and only exercised on a
+ * physical device (it cannot run on the JVM/CI).
  *
  * Implementations must translate native failures into [LocalInferenceException]
  * (or let [OutOfMemoryError] propagate) so the provider can map them to a typed

@@ -12,26 +12,26 @@ object LocalModelCatalog {
 
     val models: List<LocalModelSpec> = listOf(
         LocalModelSpec(
-            id = "smolvlm-256m-instruct-q8",
-            name = "SmolVLM 256M Instruct",
-            description = "Tiny, fast vision model — best for low-RAM devices.",
-            sizeBytes = 290_000_000L,
-            quantization = "Q8_0",
-            minRamMb = 2048,
-            fileName = "SmolVLM-256M-Instruct-Q8_0.gguf",
-            downloadUrl = "https://huggingface.co/ggml-org/SmolVLM-256M-Instruct-GGUF/" +
-                "resolve/main/SmolVLM-256M-Instruct-Q8_0.gguf"
+            id = "gemma-3n-e4b-it-int4",
+            name = "Gemma 3n 4B (int4)",
+            description = "Multimodal vision-language model — best quality, needs ~4 GB RAM.",
+            sizeBytes = 4_405_655_031L,
+            quantization = "int4",
+            minRamMb = 4096,
+            fileName = "gemma-3n-E4B-it-int4.task",
+            downloadUrl = "https://huggingface.co/google/gemma-3n-E4B-it-litert-preview/" +
+                "resolve/main/gemma-3n-E4B-it-int4.task"
         ),
         LocalModelSpec(
-            id = "smolvlm-500m-instruct-q8",
-            name = "SmolVLM 500M Instruct",
-            description = "Small vision model with stronger scene understanding.",
-            sizeBytes = 540_000_000L,
-            quantization = "Q8_0",
+            id = "gemma-3n-e2b-it-int4",
+            name = "Gemma 3n 2B (int4)",
+            description = "Lighter multimodal model — good for mid-range devices (~3 GB).",
+            sizeBytes = 3_136_226_711L,
+            quantization = "int4",
             minRamMb = 3072,
-            fileName = "SmolVLM-500M-Instruct-Q8_0.gguf",
-            downloadUrl = "https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/" +
-                "resolve/main/SmolVLM-500M-Instruct-Q8_0.gguf"
+            fileName = "gemma-3n-E2B-it-int4.task",
+            downloadUrl = "https://huggingface.co/google/gemma-3n-E2B-it-litert-preview/" +
+                "resolve/main/gemma-3n-E2B-it-int4.task"
         )
     )
 

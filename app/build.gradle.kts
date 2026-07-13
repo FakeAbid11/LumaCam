@@ -35,7 +35,8 @@ android {
 
     defaultConfig {
         applicationId = "com.lumacam.app"
-        minSdk = 24
+        // MediaPipe's LLM Inference (tasks-genai) AAR requires API 26.
+        minSdk = 26
         targetSdk = 34
         // Monotonic in CI (base + run number); falls back to 1 for local builds.
         versionCode = 1 + (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 0)
