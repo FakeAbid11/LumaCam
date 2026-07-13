@@ -734,27 +734,26 @@ private fun AiModeIndicator(
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             AiMode.entries.forEach { mode ->
-                val enabled = when (mode) {
-                    AiMode.CLOUD_AI -> cloudAvailable
-                    AiMode.LOCAL_AI -> localAvailable
-                    else -> true
+                // Items are always selectable. The "(no key)" / "(no model)" suffix
+                // signals a missing prerequisite without greying the row out (which
+                // made the modes look broken); picking one without its setup surfaces
+                // a clear "add key / download model in Settings" message via the HUD.
+                val suffix = when (mode) {
+                    AiMode.CLOUD_AI -> if (!cloudAvailable) " (no key)" else ""
+                    AiMode.LOCAL_AI -> if (!localAvailable) " (no model)" else ""
+                    else -> ""
                 }
                 DropdownMenuItem(
-                    enabled = enabled,
+                    enabled = true,
                     onClick = {
                         onSelect(mode)
                         expanded = false
                     },
                     text = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            val suffix = when (mode) {
-                                AiMode.CLOUD_AI -> if (!cloudAvailable) " (no key)" else ""
-                                AiMode.LOCAL_AI -> if (!localAvailable) " (no model)" else ""
-                                else -> ""
-                            }
                             Text(
                                 mode.displayName + suffix,
-                                color = if (enabled) Color.White else Color(0x88FFFFFF)
+                                color = Color.White
                             )
                             if (mode == current) {
                                 Spacer(Modifier.size(4.dp))
