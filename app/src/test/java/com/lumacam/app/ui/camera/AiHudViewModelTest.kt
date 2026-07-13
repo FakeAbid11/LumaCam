@@ -5,6 +5,7 @@ import android.graphics.Bitmap.Config.ARGB_8888
 import com.lumacam.app.data.AiMode
 import com.lumacam.app.data.CloudAiCredentials
 import com.lumacam.app.data.LocalModelRepository
+import com.lumacam.app.data.LocalModelStorage
 import com.lumacam.app.data.SettingsRepository
 import com.lumacam.feature.ai.AnalysisStage
 import com.lumacam.feature.ai.AnalysisState
@@ -21,7 +22,6 @@ import com.lumacam.feature.ai.cloud.ConnectionTestResult
 import com.lumacam.feature.ai.local.LocalAiOutcome
 import com.lumacam.feature.ai.local.LocalAiProvider
 import com.lumacam.feature.ai.local.LocalImage
-import com.lumacam.feature.ai.local.LocalModelStorage
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
