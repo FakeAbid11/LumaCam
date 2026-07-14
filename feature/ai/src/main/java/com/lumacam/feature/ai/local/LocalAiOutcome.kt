@@ -8,7 +8,11 @@ import com.lumacam.feature.ai.CompositionResult
  * typed [LocalAiError]. Providers always return this and never throw.
  */
 sealed interface LocalAiOutcome {
-    data class Success(val result: CompositionResult) : LocalAiOutcome
+    data class Success(
+        val result: CompositionResult,
+        /** The raw model text, kept for on-device debugging/inspection. */
+        val rawResponse: String = ""
+    ) : LocalAiOutcome
     data class Failure(val error: LocalAiError) : LocalAiOutcome
 }
 

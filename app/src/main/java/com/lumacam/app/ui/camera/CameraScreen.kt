@@ -556,7 +556,7 @@ private fun CameraContent(
             onDismiss = { showAiSheet = false },
             title = "AI Assistant"
         ) {
-            AiAssistantSheetContent(result = aiResult)
+            AiAssistantSheetContent(result = aiResult, rawResponse = hudState.rawResponse)
         }
     }
 

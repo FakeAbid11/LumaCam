@@ -39,7 +39,24 @@ object CompositionJsonMapper {
         @SerialName("targetCrop") val targetCrop: CropDto? = null,
         @SerialName("subjectPoint") val subjectPoint: PointDto? = null,
         @SerialName("recommendedAction") val recommendedAction: String? = null,
-        @SerialName("primaryGuidance") val primaryGuidance: String? = null
+        @SerialName("primaryGuidance") val primaryGuidance: String? = null,
+        // --- Common key variants models actually emit (snake_case / synonyms) ---
+        @SerialName("score") val score: Double? = null,
+        @SerialName("overall_score") val overallScore: Double? = null,
+        @SerialName("composition_score") val composition_score: Double? = null,
+        @SerialName("rating") val rating: Double? = null,
+        @SerialName("quality") val quality: Double? = null,
+        @SerialName("scene") val scene: String? = null,
+        @SerialName("direction") val direction: String? = null,
+        @SerialName("action") val action: String? = null,
+        @SerialName("guidance") val guidance: String? = null,
+        @SerialName("analysis") val analysis: String? = null,
+        @SerialName("comment") val comment: String? = null,
+        @SerialName("feedback") val feedback: String? = null,
+        @SerialName("description") val description: String? = null,
+        @SerialName("summary") val summary: String? = null,
+        @SerialName("reasoning") val reasoning: String? = null,
+        @SerialName("explanation") val explanation: String? = null
     )
 
     @Serializable
@@ -66,17 +83,28 @@ object CompositionJsonMapper {
     fun parse(rawContent: String?): CompositionResult? {
         val jsonText = extractJsonObject(rawContent) ?: return null
         val dto = runCatching { json.decodeFromString<Dto>(jsonText) }.getOrNull() ?: return null
+        val score = listOf(
+            dto.compositionScore, dto.score, dto.overallScore,
+            dto.composition_score, dto.rating, dto.quality
+        ).firstNotNullOfOrNull { it }
+        val guidance = listOf(
+            dto.primaryGuidance, dto.guidance, dto.analysis, dto.comment,
+            dto.feedback, dto.description, dto.summary, dto.reasoning, dto.explanation
+        ).firstNotNullOfOrNull { it?.trim()?.takeIf { t -> t.isNotEmpty() } }
+        val scene = listOf(dto.sceneType, dto.scene).firstNotNullOfOrNull { it }
+        val direction = listOf(dto.suggestedDirection, dto.direction).firstNotNullOfOrNull { it }
+        val action = listOf(dto.recommendedAction, dto.action).firstNotNullOfOrNull { it }
         return CompositionResult(
             tiltAngle = dto.tiltAngle?.toFloat() ?: 0f,
-            compositionScore = normalizeScore(dto.compositionScore),
-            suggestedDirection = normalizeDirection(dto.suggestedDirection),
-            sceneType = normalizeScene(dto.sceneType),
+            compositionScore = normalizeScore(score),
+            suggestedDirection = normalizeDirection(direction),
+            sceneType = normalizeScene(scene),
             lighting = normalizeLighting(dto.lighting),
             suggestions = normalizeSuggestions(dto.suggestions),
             targetCrop = normalizeCrop(dto.targetCrop),
             subjectPoint = normalizePoint(dto.subjectPoint),
-            recommendedAction = normalizeAction(dto.recommendedAction),
-            primaryGuidance = dto.primaryGuidance?.trim()?.takeIf { it.isNotEmpty() }
+            recommendedAction = normalizeAction(action),
+            primaryGuidance = guidance
         )
     }
 

@@ -46,7 +46,12 @@ object CompositionPromptBuilder {
             - Include "subjectPoint" as the normalized center of the main subject (x,y in 0..1) when one is present.
             - Set "recommendedAction" to the single most helpful next step (zoom_in, zoom_out, reposition, hold_and_shoot, or none).
             - Write "primaryGuidance" as one short, friendly sentence narrating your reasoning.
-            - If unsure of the scene, use "unknown".$context
+            - If unsure of the scene, use "unknown".
+            - CRITICAL: respond with EXACTLY the JSON keys shown above, in camelCase:
+              compositionScore, sceneType, suggestedDirection, tiltAngle, lighting,
+              suggestions, subjectPoint, recommendedAction, primaryGuidance.
+              Do NOT use snake_case (e.g. composition_score), do NOT rename keys, and do
+              NOT wrap the JSON in markdown or extra text.$context
         """.trimIndent()
     }
 }

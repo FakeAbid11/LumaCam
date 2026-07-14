@@ -93,7 +93,8 @@ class AiHudViewModel @Inject constructor(
                         _state.value.copy(
                             active = true,
                             stage = AnalysisStage.READY,
-                            result = s.result
+                            result = s.result,
+                            rawResponse = s.rawResponse
                         )
                 }
             }
@@ -141,7 +142,8 @@ class AiHudViewModel @Inject constructor(
         emit(AnalysisState.InProgress(AnalysisStage.BUILDING_COMPOSITION))
         val image = LocalImage(frame.toJpegBytes(rotationDegrees))
         when (val outcome = localAiProvider.analyze(image)) {
-            is LocalAiOutcome.Success -> emit(AnalysisState.Ready(outcome.result))
+            is LocalAiOutcome.Success ->
+                emit(AnalysisState.Ready(outcome.result, rawResponse = outcome.rawResponse))
             is LocalAiOutcome.Failure -> emit(AnalysisState.Ready(errorResult(outcome.error.message)))
         }
     }
@@ -188,7 +190,9 @@ class AiHudViewModel @Inject constructor(
 data class AiHudState(
     val active: Boolean = false,
     val stage: AnalysisStage? = null,
-    val result: CompositionResult? = null
+    val result: CompositionResult? = null,
+    /** Raw Local-AI model text, surfaced in the HUD for on-device debugging. */
+    val rawResponse: String? = null
 ) {
     val isAnalyzing: Boolean
         get() = active && result == null && stage != null && stage != AnalysisStage.READY

@@ -101,5 +101,9 @@ sealed interface AnalysisState {
     data class InProgress(val stage: AnalysisStage) : AnalysisState
 
     /** Analysis complete; overlays can render from [result]. */
-    data class Ready(val result: CompositionResult) : AnalysisState
+    data class Ready(
+        val result: CompositionResult,
+        /** Raw model text (Local AI only), surfaced for on-device debugging. */
+        val rawResponse: String? = null
+    ) : AnalysisState
 }

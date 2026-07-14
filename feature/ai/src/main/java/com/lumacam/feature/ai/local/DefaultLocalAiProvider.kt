@@ -1,5 +1,6 @@
 package com.lumacam.feature.ai.local
 
+import android.util.Log
 import com.lumacam.feature.ai.cloud.CompositionJsonMapper
 import com.lumacam.feature.ai.cloud.CompositionPromptBuilder
 import java.io.File
@@ -39,6 +40,7 @@ class DefaultLocalAiProvider(
             engine.load(active.filePath, active.spec.multimodal)
             val prompt = CompositionPromptBuilder.build(context)
             val raw = engine.analyze(image, prompt)
+            Log.d("LumaLocalAI", "raw model output:\n$raw")
             val result = CompositionJsonMapper.parse(raw)
                 ?: return LocalAiOutcome.Failure(
                     LocalAiError.InferenceFailed(
@@ -46,7 +48,7 @@ class DefaultLocalAiProvider(
                             "composition score." + if (raw.isNotBlank()) "\n\nModel said:\n$raw" else ""
                     )
                 )
-            LocalAiOutcome.Success(result)
+            LocalAiOutcome.Success(result, rawResponse = raw)
         } catch (oom: OutOfMemoryError) {
             // Memory safety: never let an OOM crash the app — surface it clearly.
             LocalAiOutcome.Failure(LocalAiError.OutOfMemory)
