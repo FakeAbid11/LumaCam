@@ -447,7 +447,12 @@ private fun CameraContent(
                     Spacer(Modifier.size(LumaSpacing.md))
                     ModeSwitcher(
                         mode = captureMode,
-                        onModeChange = { if (!isRecording) { captureMode = it; interactionTick++ } },
+                        onModeChange = {
+                        if (!isRecording) {
+                            captureMode = it
+                            interactionTick++
+                        }
+                    },
                         enabled = !isRecording
                     )
                     Spacer(Modifier.size(LumaSpacing.lg))
