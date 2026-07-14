@@ -347,7 +347,9 @@ fun GuidanceCaption(
     Box(
         modifier
             .fillMaxSize()
-            .padding(bottom = 100.dp, start = 24.dp, end = 24.dp),
+            // Raised above the bottom control bar so the caption never
+            // overlaps the shutter / mode switcher.
+            .padding(bottom = 300.dp, start = 24.dp, end = 24.dp),
         contentAlignment = Alignment.BottomCenter
     ) {
         Text(
@@ -381,7 +383,8 @@ fun RecommendedActionButton(
         RecommendedAction.NONE -> Icons.Filled.Check to "Looks good"
     }
     Box(
-        modifier.fillMaxSize().padding(bottom = 24.dp),
+        // Floats just above the bottom control bar (clears the shutter row).
+        modifier.fillMaxSize().padding(bottom = 240.dp),
         contentAlignment = Alignment.BottomCenter
     ) {
         Button(

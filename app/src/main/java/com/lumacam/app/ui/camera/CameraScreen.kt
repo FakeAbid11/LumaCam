@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -44,6 +43,8 @@ import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.GridOff
 import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -55,6 +56,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -98,6 +100,7 @@ import com.lumacam.app.ui.camera.hud.RecommendedActionButton
 import com.lumacam.app.ui.camera.hud.SubjectLockBadge
 import com.lumacam.core.camera.FlashMode
 import com.lumacam.app.data.AiMode
+import com.lumacam.core.common.film.FilmPreset
 import com.lumacam.core.ui.components.GradientIcon
 import com.lumacam.core.ui.components.LumaBottomSheet
 import com.lumacam.core.ui.components.LumaTopAppBar
@@ -357,54 +360,44 @@ private fun CameraContent(
                 if (bitmap != null) hudViewModel.startAnalysis(bitmap, rotation)
             }
         }
+        var creativeExpanded by remember { mutableStateOf(false) }
         AnimatedVisibility(
             visible = controlsVisible,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.TopCenter)
         ) {
-            LumaTopAppBar(
-                title = "Camera",
-                onBack = { },
-                showBack = false,
-                actions = {
-                    CameraTopBarActions(
-                        flashMode = flashMode,
-                        showProAvailable = capabilities?.supportsAnyManualControl == true,
-                        proActive = showPro,
-                        gridEnabled = gridEnabled,
-                        aiMode = aiMode,
-                        onAiModeChange = { viewModel.setAiMode(it) },
-                        cloudAiAvailable = cloudAiAvailable,
-                        localAiAvailable = localAiAvailable,
-                        onFlash = { cycleFlash(viewModel, flashMode); interactionTick++ },
-                        onSwitchLens = { viewModel.toggleLens(); interactionTick++ },
-                        onPro = { showPro = true; interactionTick++ },
-                        onToggleGrid = { gridEnabled = !gridEnabled; interactionTick++ },
-                        onSettings = { navController?.navigate(Routes.SETTINGS) }
-                    )
-                }
-            )
-        }
-
-        // Recording indicator + AE/AF lock badges.
-        Column(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .statusBarsPadding()
-                .padding(top = 56.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            if (isRecording) RecordingPill()
-            if (manualState.exposureLocked || manualState.focusLocked) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (manualState.exposureLocked) LockBadge("AE-L")
-                    if (manualState.focusLocked) LockBadge("AF-L")
-                }
-            }
-            error?.let {
-                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                LumaTopAppBar(
+                    title = "Camera",
+                    onBack = { },
+                    showBack = false,
+                    actions = {
+                        CameraTopBarActions(
+                            flashMode = flashMode,
+                            showProAvailable = capabilities?.supportsAnyManualControl == true,
+                            proActive = showPro,
+                            gridEnabled = gridEnabled,
+                            aiMode = aiMode,
+                            onAiModeChange = { viewModel.setAiMode(it) },
+                            cloudAiAvailable = cloudAiAvailable,
+                            localAiAvailable = localAiAvailable,
+                            onFlash = { cycleFlash(viewModel, flashMode); interactionTick++ },
+                            onSwitchLens = { viewModel.toggleLens(); interactionTick++ },
+                            onPro = { showPro = true; interactionTick++ },
+                            onToggleGrid = { gridEnabled = !gridEnabled; interactionTick++ },
+                            onSettings = { navController?.navigate(Routes.SETTINGS) }
+                        )
+                    }
+                )
+                // Status sits directly below the app bar so recording / lock
+                // indicators read as part of the chrome, not a floating badge.
+                CameraStatusRow(
+                    isRecording = isRecording,
+                    exposureLocked = manualState.exposureLocked,
+                    focusLocked = manualState.focusLocked,
+                    error = error
+                )
             }
         }
 
@@ -414,7 +407,7 @@ private fun CameraContent(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(bottom = 20.dp),
+                .padding(bottom = LumaSpacing.xl),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             AnimatedVisibility(visible = controlsVisible, enter = fadeIn(), exit = fadeOut()) {
@@ -440,31 +433,27 @@ private fun CameraContent(
                             }
                         }
                     }
-                    Spacer(Modifier.size(8.dp))
-                    FilmPresetStrip(
+                    Spacer(Modifier.size(LumaSpacing.sm))
+                    CreativeControlsCluster(
+                        expanded = creativeExpanded,
+                        onToggle = { creativeExpanded = !creativeExpanded },
                         presets = viewModel.filmPresets,
                         selected = filmPreset,
                         onSelect = { viewModel.setFilmPreset(it); interactionTick++ },
-                        modifier = Modifier.fillMaxWidth()
+                        previewFilterEnabled = previewFilterEnabled,
+                        onToggleFilter = { viewModel.setPreviewFilterEnabled(it); interactionTick++ }
                     )
-                    if (!filmPreset.isIdentity) {
-                        Spacer(Modifier.size(8.dp))
-                        PreviewFilterToggle(
-                            enabled = previewFilterEnabled,
-                            onToggle = { viewModel.setPreviewFilterEnabled(it); interactionTick++ }
-                        )
-                    }
-                    Spacer(Modifier.size(12.dp))
+                    Spacer(Modifier.size(LumaSpacing.md))
                     ModeSwitcher(
                         mode = captureMode,
                         onModeChange = { if (!isRecording) { captureMode = it; interactionTick++ } },
                         enabled = !isRecording
                     )
-                    Spacer(Modifier.size(16.dp))
+                    Spacer(Modifier.size(LumaSpacing.lg))
                 }
             }
 
-            Box(Modifier.fillMaxWidth().padding(horizontal = 28.dp)) {
+            Box(Modifier.fillMaxWidth().padding(horizontal = LumaSpacing.xl)) {
                 GalleryThumbnail(
                     uri = lastMedia,
                     onClick = { lastMedia?.let { fullScreenMedia = it } },
@@ -652,7 +641,12 @@ private fun CameraTopBarActions(
         cloudAvailable = cloudAiAvailable,
         localAvailable = localAiAvailable
     )
-    Spacer(Modifier.width(4.dp))
+    Spacer(Modifier.width(LumaSpacing.sm))
+    VerticalDivider(
+        modifier = Modifier.height(24.dp),
+        color = LumaColors.chromeBorder
+    )
+    Spacer(Modifier.width(LumaSpacing.sm))
     IconButton(onClick = onToggleGrid) {
         Icon(
             if (gridEnabled) Icons.Filled.GridOn else Icons.Filled.GridOff,
@@ -816,6 +810,110 @@ private fun LockBadge(text: String) {
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
         )
+    }
+}
+
+/**
+ * Recording / AE-L / AF-L / error indicators, rendered as a single row directly
+ * beneath the top app bar so they read as part of the camera chrome.
+ */
+@Composable
+private fun CameraStatusRow(
+    isRecording: Boolean,
+    exposureLocked: Boolean,
+    focusLocked: Boolean,
+    error: String?,
+    modifier: Modifier = Modifier
+) {
+    if (!isRecording && !exposureLocked && !focusLocked && error == null) return
+    Row(
+        modifier = modifier
+            .padding(vertical = LumaSpacing.xs, horizontal = LumaSpacing.lg),
+        horizontalArrangement = Arrangement.spacedBy(LumaSpacing.sm),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (isRecording) RecordingPill()
+        if (exposureLocked) LockBadge("AE-L")
+        if (focusLocked) LockBadge("AF-L")
+        error?.let {
+            Text(
+                it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+/**
+ * Collapsible creative controls (film presets + live preview filter). Collapsed
+ * by default behind a compact pill showing the active preset, so the capture
+ * flow stays uncluttered; expand to tweak look.
+ */
+@Composable
+private fun CreativeControlsCluster(
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    presets: List<FilmPreset>,
+    selected: FilmPreset,
+    onSelect: (FilmPreset) -> Unit,
+    previewFilterEnabled: Boolean,
+    onToggleFilter: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(LumaSpacing.sm)
+    ) {
+        Box(
+            modifier = Modifier
+                .clip(LumaShapes.medium)
+                .background(LumaColors.chromeBlack.copy(alpha = 0.55f))
+                .clickable(onClick = onToggle)
+                .heightIn(min = 40.dp)
+                .padding(horizontal = LumaSpacing.md, vertical = LumaSpacing.xs),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(LumaSpacing.sm),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Filled.AutoAwesome,
+                    contentDescription = null,
+                    tint = LumaWhite,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    selected.name,
+                    color = LumaWhite,
+                    style = MaterialTheme.typography.labelMedium
+                )
+                Icon(
+                    if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                    contentDescription = if (expanded) "Collapse creative controls" else "Expand creative controls",
+                    tint = LumaColors.chromeMuted,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+        AnimatedVisibility(visible = expanded, enter = fadeIn(), exit = fadeOut()) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(LumaSpacing.sm)
+            ) {
+                FilmPresetStrip(
+                    presets = presets,
+                    selected = selected,
+                    onSelect = onSelect,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (!selected.isIdentity) {
+                    PreviewFilterToggle(enabled = previewFilterEnabled, onToggle = onToggleFilter)
+                }
+            }
+        }
     }
 }
 
