@@ -100,6 +100,7 @@ import com.lumacam.core.camera.FlashMode
 import com.lumacam.app.data.AiMode
 import com.lumacam.core.ui.components.GradientIcon
 import com.lumacam.core.ui.components.LumaBottomSheet
+import com.lumacam.core.ui.components.LumaTopAppBar
 import com.lumacam.core.ui.components.LumaPill
 import com.lumacam.core.ui.theme.LumaAccent
 import com.lumacam.core.ui.theme.LumaColors
@@ -347,33 +348,42 @@ private fun CameraContent(
         }
         }
 
-        // Top chrome — fades with relevance.
+        // Top chrome — fades with relevance. Uses the shared LumaTopAppBar so the
+        // camera reads like the rest of the app (dark bar + title). Camera is the
+        // home screen, so the back affordance is hidden.
+        val onAnalyze: () -> Unit = {
+            interactionTick++
+            viewModel.captureAnalysisFrame { bitmap, rotation ->
+                if (bitmap != null) hudViewModel.startAnalysis(bitmap, rotation)
+            }
+        }
         AnimatedVisibility(
             visible = controlsVisible,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.TopCenter)
         ) {
-            TopBar(
-                flashMode = flashMode,
-                showProAvailable = capabilities?.supportsAnyManualControl == true,
-                proActive = showPro,
-                gridEnabled = gridEnabled,
-                aiMode = aiMode,
-                onAiModeChange = { viewModel.setAiMode(it) },
-                cloudAiAvailable = cloudAiAvailable,
-                localAiAvailable = localAiAvailable,
-                onFlash = { cycleFlash(viewModel, flashMode); interactionTick++ },
-                onSwitchLens = { viewModel.toggleLens(); interactionTick++ },
-                onPro = { showPro = true; interactionTick++ },
-                onToggleGrid = { gridEnabled = !gridEnabled; interactionTick++ },
-                onAnalyze = {
-                    interactionTick++
-                    viewModel.captureAnalysisFrame { bitmap, rotation ->
-                        if (bitmap != null) hudViewModel.startAnalysis(bitmap, rotation)
-                    }
-                },
-                onSettings = { navController?.navigate(Routes.SETTINGS) }
+            LumaTopAppBar(
+                title = "Camera",
+                onBack = { },
+                showBack = false,
+                actions = {
+                    CameraTopBarActions(
+                        flashMode = flashMode,
+                        showProAvailable = capabilities?.supportsAnyManualControl == true,
+                        proActive = showPro,
+                        gridEnabled = gridEnabled,
+                        aiMode = aiMode,
+                        onAiModeChange = { viewModel.setAiMode(it) },
+                        cloudAiAvailable = cloudAiAvailable,
+                        localAiAvailable = localAiAvailable,
+                        onFlash = { cycleFlash(viewModel, flashMode); interactionTick++ },
+                        onSwitchLens = { viewModel.toggleLens(); interactionTick++ },
+                        onPro = { showPro = true; interactionTick++ },
+                        onToggleGrid = { gridEnabled = !gridEnabled; interactionTick++ },
+                        onSettings = { navController?.navigate(Routes.SETTINGS) }
+                    )
+                }
             )
         }
 
@@ -482,6 +492,37 @@ private fun CameraContent(
                     },
                     modifier = Modifier.align(Alignment.Center)
                 )
+                // Analyze sits beside the shutter (right). Circular, mirroring the
+                // shutter's ring; dimmed/disabled when AI is OFF.
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .border(
+                            1.5.dp,
+                            if (aiMode == AiMode.OFF) LumaColors.chromeMuted else LumaWhite,
+                            CircleShape
+                        )
+                        .clickable(enabled = aiMode != AiMode.OFF, onClick = onAnalyze)
+                        .padding(12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (aiMode == AiMode.OFF) {
+                        Icon(
+                            Icons.Filled.AutoAwesome,
+                            "Analyze scene",
+                            tint = LumaColors.chromeMuted,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    } else {
+                        GradientIcon(
+                            Icons.Filled.AutoAwesome,
+                            "Analyze scene",
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+                }
             }
         }
     }
@@ -590,7 +631,7 @@ private fun CaptureFlashOverlay(
 }
 
 @Composable
-private fun TopBar(
+private fun CameraTopBarActions(
     flashMode: Int,
     showProAvailable: Boolean,
     proActive: Boolean,
@@ -603,62 +644,39 @@ private fun TopBar(
     onSwitchLens: () -> Unit,
     onPro: () -> Unit,
     onToggleGrid: () -> Unit,
-    onAnalyze: () -> Unit,
     onSettings: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        AiModeIndicator(
-            current = aiMode,
-            onSelect = onAiModeChange,
-            cloudAvailable = cloudAiAvailable,
-            localAvailable = localAiAvailable
+    AiModeIndicator(
+        current = aiMode,
+        onSelect = onAiModeChange,
+        cloudAvailable = cloudAiAvailable,
+        localAvailable = localAiAvailable
+    )
+    Spacer(Modifier.width(4.dp))
+    IconButton(onClick = onToggleGrid) {
+        Icon(
+            if (gridEnabled) Icons.Filled.GridOn else Icons.Filled.GridOff,
+            "Grid",
+            tint = LumaWhite
         )
-        Spacer(Modifier.weight(1f))
-        // Real Luma Vision analysis: taps grab a live preview frame and run it
-        // through the on-device analyzer (BUG 1). Disabled when AI is OFF.
-        IconButton(onClick = onAnalyze, enabled = aiMode != AiMode.OFF) {
-                    if (aiMode == AiMode.OFF) {
-                Icon(
-                    Icons.Filled.AutoAwesome,
-                    "Analyze scene",
-                    tint = LumaColors.chromeMuted,
-                    modifier = Modifier.size(24.dp)
-                )
+    }
+    IconButton(onClick = onFlash) {
+        Icon(flashIcon(flashMode), "Flash mode", tint = LumaWhite)
+    }
+    IconButton(onClick = onSwitchLens) {
+        Icon(Icons.Filled.Cameraswitch, "Switch camera", tint = LumaWhite)
+    }
+    if (showProAvailable) {
+        IconButton(onClick = onPro) {
+            if (proActive) {
+                GradientIcon(Icons.Filled.Tune, "Pro controls", modifier = Modifier.size(24.dp))
             } else {
-                GradientIcon(Icons.Filled.AutoAwesome, "Analyze scene", modifier = Modifier.size(24.dp))
+                Icon(Icons.Filled.Tune, "Pro controls", tint = LumaWhite)
             }
         }
-        IconButton(onClick = onToggleGrid) {
-            Icon(
-                if (gridEnabled) Icons.Filled.GridOn else Icons.Filled.GridOff,
-                "Grid",
-                tint = LumaWhite
-            )
-        }
-        IconButton(onClick = onFlash) {
-            Icon(flashIcon(flashMode), "Flash mode", tint = LumaWhite)
-        }
-        IconButton(onClick = onSwitchLens) {
-            Icon(Icons.Filled.Cameraswitch, "Switch camera", tint = LumaWhite)
-        }
-        if (showProAvailable) {
-            IconButton(onClick = onPro) {
-                if (proActive) {
-                    GradientIcon(Icons.Filled.Tune, "Pro controls", modifier = Modifier.size(24.dp))
-                } else {
-                    Icon(Icons.Filled.Tune, "Pro controls", tint = LumaWhite)
-                }
-            }
-        }
-        IconButton(onClick = onSettings) {
-            Icon(Icons.Filled.Settings, "Settings", tint = LumaWhite)
-        }
+    }
+    IconButton(onClick = onSettings) {
+        Icon(Icons.Filled.Settings, "Settings", tint = LumaWhite)
     }
 }
 

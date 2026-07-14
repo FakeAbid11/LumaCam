@@ -23,15 +23,18 @@ fun LumaTopAppBar(
     title: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    showBack: Boolean = true,
     actions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {}
 ) {
     TopAppBar(
         title = { Text(title) },
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = LumaWhite)
+        navigationIcon = if (showBack) {
+            {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = LumaWhite)
+                }
             }
-        },
+        } else null,
         actions = actions,
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = LumaBlack,
