@@ -40,7 +40,7 @@ class DefaultLocalAiProvider(
             engine.load(active.filePath, active.spec.multimodal)
             val prompt = CompositionPromptBuilder.build(context)
             val raw = engine.analyze(image, prompt)
-            Log.d("LumaLocalAI", "raw model output:\n$raw")
+            runCatching { Log.d("LumaLocalAI", "raw model output:\n$raw") }
             val result = CompositionJsonMapper.parse(raw)
                 ?: return LocalAiOutcome.Failure(
                     LocalAiError.InferenceFailed(
