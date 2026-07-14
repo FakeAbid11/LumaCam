@@ -45,6 +45,9 @@ class LiteRtLocalInferenceEngine(
                     modelPath = modelPath,
                     backend = Backend.CPU(),
                     visionBackend = if (multimodal) Backend.GPU() else null,
+                    maxNumTokens = 2048,
+                    maxNumImages = if (multimodal) 1 else 0,
+                    cacheDir = context.cacheDir.absolutePath,
                 )
                 Engine(config).apply { initialize() }
             }
@@ -70,7 +73,19 @@ class LiteRtLocalInferenceEngine(
                     Contents.of(Content.Text(prompt))
                 }
                 try {
-                    conversation.sendMessage(contents).toString()
+                    val message = conversation.sendMessage(contents)
+                    val text = message.contents.contents
+                        .filterIsInstance<Content.Text>()
+                        .joinToString(separator = "\n") { it.text }
+                    if (text.isBlank()) {
+                        throw LocalInferenceException(
+                            LocalInferenceError.INFERENCE_FAILED,
+                            "The on-device model returned no text."
+                        )
+                    }
+                    text
+                } catch (err: LocalInferenceException) {
+                    throw err
                 } catch (err: Exception) {
                     throw LocalInferenceException(
                         LocalInferenceError.INFERENCE_FAILED,

@@ -41,7 +41,10 @@ class DefaultLocalAiProvider(
             val raw = engine.analyze(image, prompt)
             val result = CompositionJsonMapper.parse(raw)
                 ?: return LocalAiOutcome.Failure(
-                    LocalAiError.InferenceFailed("Unparseable model output.")
+                    LocalAiError.InferenceFailed(
+                        "The on-device model returned output that couldn't be parsed as a " +
+                            "composition score." + if (raw.isNotBlank()) "\n\nModel said:\n$raw" else ""
+                    )
                 )
             LocalAiOutcome.Success(result)
         } catch (oom: OutOfMemoryError) {
